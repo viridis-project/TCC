@@ -1,0 +1,83 @@
+{
+  "info": {
+    "_postman_id": "c7c25bf0-88aa-4e98-9af9-20260825abcd",
+    "name": "Viridis API",
+    "description": "Coleção completa da API Viridis. O Postman mantém automaticamente o cookie de sessão por host.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8081/api" },
+    { "key": "lessonId", "value": "1" },
+    { "key": "questionId", "value": "1" },
+    { "key": "optionId", "value": "2" },
+    { "key": "missionId", "value": "1" },
+    { "key": "submissionId", "value": "1" },
+    { "key": "rewardId", "value": "1" },
+    { "key": "partnerId", "value": "1" },
+    { "key": "scheduleId", "value": "1" },
+    { "key": "codigoTurma", "value": "7A-4CF7" }
+  ],
+  "item": [
+    {
+      "name": "Autenticação",
+      "item": [
+        { "name": "Registro", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": {"mode":"raw","raw":"{\n  \"nome\": \"Novo Aluno\",\n  \"email\": \"novo@example.com\",\n  \"username\": \"novo.aluno\",\n  \"senha\": \"Viridis2026\",\n  \"codigo_turma\": \"{{codigoTurma}}\"\n}"}, "url": "{{baseUrl}}/auth/registro" } },
+        { "name": "Login aluno", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": {"mode":"raw","raw":"{\n  \"login\": \"ana.clara\",\n  \"senha\": \"Viridis2026\"\n}"}, "url": "{{baseUrl}}/auth/login" } },
+        { "name": "Login professor", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": {"mode":"raw","raw":"{\n  \"login\": \"prof.viridis\",\n  \"senha\": \"Viridis2026\"\n}"}, "url": "{{baseUrl}}/auth/login" } },
+        { "name": "Logout", "request": { "method": "POST", "url": "{{baseUrl}}/auth/logout" } }
+      ]
+    },
+    {
+      "name": "Perfil e aprendizado",
+      "item": [
+        { "name": "Obter perfil", "request": { "method": "GET", "url": "{{baseUrl}}/perfil" } },
+        { "name": "Atualizar perfil", "request": { "method": "PUT", "header": [{"key":"Content-Type","value":"application/json"}], "body": {"mode":"raw","raw":"{\n  \"nome\": \"Ana Clara Ferreira\",\n  \"notificacoes_ativas\": true,\n  \"tema_escuro\": false\n}"}, "url": "{{baseUrl}}/perfil" } },
+        { "name": "Módulos", "request": { "method": "GET", "url": "{{baseUrl}}/modulos" } },
+        { "name": "Quiz da lição", "request": { "method": "GET", "url": "{{baseUrl}}/licoes/{{lessonId}}/quiz" } },
+        { "name": "Submeter quiz", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": {"mode":"raw","raw":"{\n  \"respostas\": [\n    { \"pergunta_id\": {{questionId}}, \"opcao_id\": {{optionId}} }\n  ]\n}"}, "url": "{{baseUrl}}/licoes/{{lessonId}}/quiz/submeter" } },
+        { "name": "Certificados", "request": { "method": "GET", "url": "{{baseUrl}}/certificados" } }
+      ]
+    },
+    {
+      "name": "Missões e jardim",
+      "item": [
+        { "name": "Listar missões", "request": { "method": "GET", "url": "{{baseUrl}}/missoes" } },
+        { "name": "Enviar submissão", "request": { "method": "POST", "header": [], "body": {"mode":"formdata","formdata":[{"key":"missao_id","value":"{{missionId}}","type":"text"},{"key":"descricao","value":"Plantei uma muda na horta da escola.","type":"text"},{"key":"foto","type":"file","src":[]}]}, "url": "{{baseUrl}}/submissoes" } },
+        { "name": "Fila de submissões", "request": { "method": "GET", "url": "{{baseUrl}}/submissoes?status=pending" } },
+        { "name": "Aprovar submissão", "request": { "method": "PUT", "header": [{"key":"Content-Type","value":"application/json"}], "body": {"mode":"raw","raw":"{\n  \"status\": \"approved\",\n  \"comentario\": \"Excelente trabalho!\"\n}"}, "url": "{{baseUrl}}/submissoes/{{submissionId}}/revisar" } },
+        { "name": "Rejeitar submissão", "request": { "method": "PUT", "header": [{"key":"Content-Type","value":"application/json"}], "body": {"mode":"raw","raw":"{\n  \"status\": \"rejected\",\n  \"comentario\": \"A foto não mostra a atividade completa.\"\n}"}, "url": "{{baseUrl}}/submissoes/{{submissionId}}/revisar" } },
+        { "name": "Resumo do jardim", "request": { "method": "GET", "url": "{{baseUrl}}/jardim/resumo" } }
+      ]
+    },
+    {
+      "name": "Recompensas e ranking",
+      "item": [
+        { "name": "Listar recompensas", "request": { "method": "GET", "url": "{{baseUrl}}/recompensas" } },
+        { "name": "Resgatar", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": {"mode":"raw","raw":"{ \"recompensa_id\": {{rewardId}} }"}, "url": "{{baseUrl}}/resgates" } },
+        { "name": "Ranking individual", "request": { "method": "GET", "url": "{{baseUrl}}/ranking?tipo=individual" } },
+        { "name": "Ranking turma", "request": { "method": "GET", "url": "{{baseUrl}}/ranking?tipo=turma" } },
+        { "name": "Ranking escola", "request": { "method": "GET", "url": "{{baseUrl}}/ranking?tipo=escola" } }
+      ]
+    },
+    {
+      "name": "Cronograma",
+      "item": [
+        { "name": "Listar", "request": { "method": "GET", "url": "{{baseUrl}}/cronograma" } },
+        { "name": "Criar", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": {"mode":"raw","raw":"{\n  \"missao_id\": {{missionId}},\n  \"data_sugerida\": \"2026-09-01 09:00:00\",\n  \"status_atividade\": \"Pendente\"\n}"}, "url": "{{baseUrl}}/cronograma" } },
+        { "name": "Atualizar", "request": { "method": "PUT", "header": [{"key":"Content-Type","value":"application/json"}], "body": {"mode":"raw","raw":"{\n  \"data_sugerida\": \"2026-09-02 09:00:00\",\n  \"status_atividade\": \"Concluída\"\n}"}, "url": "{{baseUrl}}/cronograma/{{scheduleId}}" } },
+        { "name": "Excluir", "request": { "method": "DELETE", "url": "{{baseUrl}}/cronograma/{{scheduleId}}" } }
+      ]
+    },
+    {
+      "name": "Administração",
+      "item": [
+        { "name": "Dashboard", "request": { "method": "GET", "url": "{{baseUrl}}/admin/dashboard" } },
+        { "name": "Listar parceiros", "request": { "method": "GET", "url": "{{baseUrl}}/parceiros" } },
+        { "name": "Obter parceiro", "request": { "method": "GET", "url": "{{baseUrl}}/parceiros/{{partnerId}}" } },
+        { "name": "Criar parceiro", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": {"mode":"raw","raw":"{\n  \"nome\": \"Parceiro Escola\",\n  \"tipo\": \"Educação\",\n  \"email\": \"parceiro@example.com\",\n  \"telefone\": \"(11) 99999-0000\"\n}"}, "url": "{{baseUrl}}/parceiros" } },
+        { "name": "Atualizar parceiro", "request": { "method": "PUT", "header": [{"key":"Content-Type","value":"application/json"}], "body": {"mode":"raw","raw":"{\n  \"nome\": \"Parceiro Atualizado\",\n  \"tipo\": \"Outros\",\n  \"email\": \"parceiro@example.com\",\n  \"ativo\": 1\n}"}, "url": "{{baseUrl}}/parceiros/{{partnerId}}" } },
+        { "name": "Desativar parceiro", "request": { "method": "DELETE", "url": "{{baseUrl}}/parceiros/{{partnerId}}" } }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+import { useEffect,useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { Edit3 } from "lucide-react";
+import { Dialog,DialogContent,DialogDescription,DialogFooter,DialogHeader,DialogTitle } from "@/components/ui/dialog";
+import { apiFetch } from "@/lib/api";
+import { toast } from "sonner";
+
+type Classroom={id:number;nome:string;ano_letivo:number};
+export function EditTurmaModal({open,onOpenChange,classroom,onSaved}:{open:boolean;onOpenChange:(value:boolean)=>void;classroom:Classroom|null;onSaved:()=>void}){
+  const [name,setName]=useState("");const [year,setYear]=useState(new Date().getFullYear());
+  useEffect(()=>{if(open&&classroom){setName(classroom.nome);setYear(Number(classroom.ano_letivo))}},[open,classroom]);
+  const mutation=useMutation({mutationFn:()=>apiFetch<{mensagem:string}>(`/diretor/turmas/${classroom!.id}`,{method:"PUT",body:JSON.stringify({nome:name,ano_letivo:year})}),onSuccess:r=>{toast.success(r.mensagem);onOpenChange(false);onSaved()},onError:e=>toast.error(e.message)});
+  return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent className="max-w-md overflow-hidden rounded-3xl border-border/60 p-0"><div className="bg-gradient-hero p-6 text-primary-foreground"><DialogHeader><DialogTitle className="flex items-center gap-2 text-xl font-extrabold"><Edit3 className="h-5 w-5"/>Editar turma</DialogTitle><DialogDescription className="text-white/80">Atualize o nome e o ano letivo.</DialogDescription></DialogHeader></div><form onSubmit={e=>{e.preventDefault();if(!name.trim())return toast.error("Informe o nome da turma");mutation.mutate()}} className="space-y-4 p-6"><Field label="Nome"><input value={name} onChange={e=>setName(e.target.value)} className={inputCls}/></Field><Field label="Ano letivo"><input type="number" min={2020} max={2100} value={year} onChange={e=>setYear(Number(e.target.value))} className={inputCls}/></Field><DialogFooter><button type="button" onClick={()=>onOpenChange(false)} className="rounded-full border border-border px-4 py-2 text-sm font-bold">Cancelar</button><button disabled={mutation.isPending} className="rounded-full bg-primary px-5 py-2 text-sm font-extrabold text-primary-foreground disabled:opacity-60">{mutation.isPending?"Salvando...":"Salvar"}</button></DialogFooter></form></DialogContent></Dialog>;
+}
+const inputCls="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20";
+function Field({label,children}:{label:string;children:React.ReactNode}){return <label className="block"><span className="mb-1.5 block text-xs font-bold uppercase tracking-widest text-muted-foreground">{label}</span>{children}</label>}
+
