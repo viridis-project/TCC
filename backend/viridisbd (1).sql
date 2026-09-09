@@ -180,6 +180,34 @@ INSERT INTO `instituicao` (`id`, `nome`, `cnpj`, `data_cadastro`) VALUES
 -- --------------------------------------------------------
 
 --
+-- Estrutura para tabela `curso`
+--
+
+CREATE TABLE `curso` (
+  `id` int(11) NOT NULL,
+  `titulo` varchar(150) NOT NULL,
+  `descricao` varchar(1000) NOT NULL DEFAULT '',
+  `escopo` enum('app','escola','turma') NOT NULL,
+  `instituicao_id` int(11) DEFAULT NULL,
+  `turma_id` int(11) DEFAULT NULL,
+  `criador_id` int(11) DEFAULT NULL,
+  `publicado` tinyint(1) NOT NULL DEFAULT 0,
+  `ativo` tinyint(1) NOT NULL DEFAULT 1,
+  `legado` tinyint(1) NOT NULL DEFAULT 0,
+  `criado_em` datetime NOT NULL DEFAULT current_timestamp(),
+  KEY `idx_curso_publico` (`escopo`,`instituicao_id`,`turma_id`,`publicado`,`ativo`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Despejando dados para a tabela `curso`
+--
+
+INSERT INTO `curso` (`id`, `titulo`, `descricao`, `escopo`, `instituicao_id`, `turma_id`, `criador_id`, `publicado`, `ativo`, `legado`, `criado_em`) VALUES
+(1, 'Trilha de sustentabilidade', 'Conteúdo original do Viridis.', 'app', NULL, NULL, NULL, 1, 1, 1, '2026-08-25 17:59:57');
+
+-- --------------------------------------------------------
+
+--
 -- Estrutura para tabela `licao`
 --
 
@@ -189,7 +217,8 @@ CREATE TABLE `licao` (
   `titulo` varchar(120) NOT NULL,
   `kind` enum('lesson','challenge','exam','certificate','trophy') NOT NULL DEFAULT 'lesson',
   `xp` int(11) NOT NULL DEFAULT 0,
-  `ordem` int(11) NOT NULL
+  `ordem` int(11) NOT NULL,
+  `ativo` tinyint(1) NOT NULL DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -247,10 +276,12 @@ INSERT INTO `missao` (`id`, `titulo`, `descricao`, `tipo`, `pontos_recompensa`, 
 
 CREATE TABLE `modulo` (
   `id` int(11) NOT NULL,
+  `curso_id` int(11) DEFAULT NULL,
   `titulo` varchar(100) NOT NULL,
   `descricao` varchar(255) NOT NULL,
   `cor` varchar(50) NOT NULL,
-  `ordem` int(11) NOT NULL
+  `ordem` int(11) NOT NULL,
+  `ativo` tinyint(1) NOT NULL DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -264,6 +295,8 @@ INSERT INTO `modulo` (`id`, `titulo`, `descricao`, `cor`, `ordem`) VALUES
 (4, 'Alimentação Saudável', 'Da horta ao prato: nutrição consciente', 'oklch(0.62 0.16 240)', 4),
 (5, 'Compostagem Avançada', 'Vermicompostagem e bioinsumos', 'oklch(0.70 0.18 50)', 5),
 (6, 'Certificado Final', 'Conclusão da trilha de sustentabilidade', 'oklch(0.75 0.16 75)', 6);
+
+UPDATE `modulo` SET `curso_id` = 1 WHERE `curso_id` IS NULL;
 
 -- --------------------------------------------------------
 
@@ -376,7 +409,8 @@ CREATE TABLE `pergunta_quiz` (
   `licao_id` int(11) DEFAULT NULL,
   `texto_pergunta` text NOT NULL,
   `explicacao` varchar(500) DEFAULT NULL,
-  `pontos_recompensa` int(11) DEFAULT 5
+  `pontos_recompensa` int(11) DEFAULT 5,
+  `ativo` tinyint(1) NOT NULL DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -677,6 +711,12 @@ ALTER TABLE `instituicao`
   ADD UNIQUE KEY `cnpj` (`cnpj`);
 
 --
+-- Índices de tabela `curso`
+--
+ALTER TABLE `curso`
+  ADD PRIMARY KEY (`id`);
+
+--
 -- Índices de tabela `licao`
 --
 ALTER TABLE `licao`
@@ -695,7 +735,8 @@ ALTER TABLE `missao`
 --
 ALTER TABLE `modulo`
   ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `uq_modulo_ordem` (`ordem`);
+  ADD UNIQUE KEY `uq_modulo_curso_ordem` (`curso_id`,`ordem`),
+  ADD KEY `idx_modulo_curso` (`curso_id`);
 
 --
 -- Índices de tabela `notificacao`
@@ -864,6 +905,12 @@ ALTER TABLE `instituicao`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
+-- AUTO_INCREMENT de tabela `curso`
+--
+ALTER TABLE `curso`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
 -- AUTO_INCREMENT de tabela `licao`
 --
 ALTER TABLE `licao`
@@ -982,6 +1029,14 @@ ALTER TABLE `cronograma_aluno`
   ADD CONSTRAINT `cronograma_aluno_ibfk_2` FOREIGN KEY (`missao_id`) REFERENCES `missao` (`id`);
 
 --
+-- Restrições para tabelas `curso`
+--
+ALTER TABLE `curso`
+  ADD CONSTRAINT `fk_curso_instituicao` FOREIGN KEY (`instituicao_id`) REFERENCES `instituicao` (`id`),
+  ADD CONSTRAINT `fk_curso_turma` FOREIGN KEY (`turma_id`) REFERENCES `turma_escolar` (`id`),
+  ADD CONSTRAINT `fk_curso_criador` FOREIGN KEY (`criador_id`) REFERENCES `usuario` (`id`);
+
+--
 -- Restrições para tabelas `horta`
 --
 ALTER TABLE `horta`
@@ -999,6 +1054,12 @@ ALTER TABLE `inspecao_horta`
 --
 ALTER TABLE `licao`
   ADD CONSTRAINT `fk_licao_modulo` FOREIGN KEY (`modulo_id`) REFERENCES `modulo` (`id`) ON DELETE CASCADE;
+
+--
+-- Restrições para tabelas `modulo`
+--
+ALTER TABLE `modulo`
+  ADD CONSTRAINT `fk_modulo_curso` FOREIGN KEY (`curso_id`) REFERENCES `curso` (`id`);
 
 --
 -- Restrições para tabelas `missao`
