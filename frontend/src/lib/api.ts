@@ -20,7 +20,8 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new ApiError(payload.erro ?? "Não foi possível concluir a operação", response.status);
+    const detail = payload.detalhe ? ` (${payload.detalhe})` : "";
+    throw new ApiError(`${payload.erro ?? "Não foi possível concluir a operação"}${detail}`, response.status);
   }
   return payload as T;
 }
@@ -58,6 +59,10 @@ export interface Lesson {
 }
 
 export interface Module {
+  curso_id: number;
+  curso_titulo: string;
+  curso_descricao: string;
+  escopo: "app" | "escola" | "turma";
   id: number;
   titulo: string;
   descricao: string;

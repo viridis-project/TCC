@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "motion/react";
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
@@ -12,9 +12,17 @@ import {
 } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { SubmitActivityModal } from "@/components/modals/submit-activity-modal";
+import { StaffGarden } from "@/components/staff-garden";
 import { apiFetch, isBrowser, userQuery, type Module as ApiModule } from "@/lib/api";
 
 export const Route = createFileRoute("/jardim")({
+  validateSearch: (search: Record<string, unknown>): { escola?: number; turma?: number } => {
+    const positiveId = (value: unknown) => {
+      const number = typeof value === "string" || typeof value === "number" ? Number(value) : NaN;
+      return Number.isSafeInteger(number) && number > 0 ? number : undefined;
+    };
+    return { escola: positiveId(search.escola), turma: positiveId(search.turma) };
+  },
   head: () => ({ meta: [{ title: "Meu Jardim — Viridis" }] }),
   component: GardenPage,
 });
@@ -35,6 +43,16 @@ function Card({ children, className = "" }: { children: React.ReactNode; classNa
 }
 
 function GardenPage() {
+  const { data: user, isPending, error } = useQuery(userQuery());
+  const search = Route.useSearch();
+  const navigate = Route.useNavigate();
+  if (isPending) return <PageShell><p role="status" className="p-16 text-center text-muted-foreground">Carregando seu jardim...</p></PageShell>;
+  if (error || !user) return <PageShell><div className="space-y-4 p-16 text-center"><p role="alert">{error?.message ?? "Faça login para continuar"}</p><Link to="/login" className="font-semibold text-primary underline">Entrar na minha conta</Link></div></PageShell>;
+  if (user.perfil_nome !== "aluno") return <StaffGarden key={`${user.id}-${user.perfil_nome}-${user.instituicao_id}`} user={user} schoolId={search.escola} classId={search.turma} onNavigate={(next) => void navigate({ search: next })} />;
+  return <StudentGardenPage />;
+}
+
+function StudentGardenPage() {
   const [activityType, setActivityType] = useState<string | null>(null);
   const [rankingType,setRankingType]=useState<"individual"|"turma"|"escola">("individual");
   const queryClient = useQueryClient();
@@ -326,6 +344,7 @@ function GardenPage() {
         onOpenChange={(v) => !v && setActivityType(null)}
         defaultType={activityType ?? undefined}
         onSubmitted={() => {
+          void queryClient.invalidateQueries({ queryKey: ["historico"] });
           void queryClient.invalidateQueries({ queryKey: ["jardim"] });
           void queryClient.invalidateQueries({ queryKey: ["perfil"] });
         }}

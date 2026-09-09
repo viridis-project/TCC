@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Home, BookOpen, Sprout, Award, User, Settings, Menu, X, Bell, School } from "lucide-react";
+import { Home, BookOpen, Sprout, Award, User, Settings, Menu, X, Bell, School, History, CalendarClock } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -11,7 +11,9 @@ const NAV = [
   { to: "/", label: "INÍCIO", icon: Home },
   { to: "/aprender", label: "APRENDER", icon: BookOpen },
   { to: "/jardim", label: "JARDIM", icon: Sprout },
+  { to: "/horarios", label: "HORÁRIOS", icon: CalendarClock },
   { to: "/recompensas", label: "RECOMPENSAS", icon: Award },
+  { to: "/historico", label: "HISTÓRICO", icon: History },
   { to: "/perfil", label: "PERFIL", icon: User },
   { to: "/admin", label: "ADMINISTRAÇÃO", icon: Settings },
   { to: "/diretor", label: "DIREÇÃO", icon: School },
@@ -23,7 +25,12 @@ export function SiteNav() {
   const [notificationsOpen,setNotificationsOpen]=useState(false);
   const { user,role } = useAuth();
   const {data:unread=0}=useQuery({queryKey:["notificacoes-contagem"],enabled:isBrowser&&!!user,refetchInterval:30000,queryFn:async()=>(await apiFetch<{contagem:number}>("/notificacoes/contagem-nao-lidas")).contagem});
-  const visibleNav = NAV.filter((item) => item.to === "/admin" ? role === "professor" || role === "admin" : item.to === "/diretor" ? role === "diretor" : true);
+  const visibleNav = NAV.filter((item) => {
+    if (item.to === "/admin") return role === "professor" || role === "admin";
+    if (item.to === "/diretor") return role === "diretor";
+    if (item.to === "/historico" || item.to === "/recompensas") return role === "aluno";
+    return true;
+  });
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border/60 bg-background/85 backdrop-blur-xl">

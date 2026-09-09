@@ -39,8 +39,15 @@ final class V2Controller extends Controller
     public function studentAgenda(): never
     {
         $user=$this->auth->user(['aluno']);
-        $stmt=$this->db->prepare('SELECT a.id,a.titulo,a.data_hora,a.status,a.missao_id,m.titulo missao,t.nome turma,u.nome professor FROM agenda a LEFT JOIN missao m ON m.id=a.missao_id LEFT JOIN turma_escolar t ON t.id=a.turma_id JOIN usuario u ON u.id=a.professor_id WHERE a.aluno_id=? ORDER BY a.data_hora');
-        $stmt->execute([(int)$user['id']]);
+        $stmt=$this->db->prepare('SELECT a.id,a.titulo,a.data_hora,a.status,a.missao_id,m.titulo missao,
+                t.nome turma,student.nome aluno,teacher.nome professor
+            FROM agenda a
+            JOIN usuario student ON student.id=a.aluno_id AND student.turma_id=?
+            LEFT JOIN missao m ON m.id=a.missao_id
+            LEFT JOIN turma_escolar t ON t.id=student.turma_id
+            JOIN usuario teacher ON teacher.id=a.professor_id
+            ORDER BY a.data_hora,student.nome');
+        $stmt->execute([(int)($user['turma_id']??0)]);
         $this->json(['agenda'=>$stmt->fetchAll()]);
     }
 
@@ -89,33 +96,6 @@ final class V2Controller extends Controller
         $stmt->execute([$status,$id,(int)$teacher['id'],$teacher['perfil_nome']]);
         if(!$stmt->rowCount())$this->json(['erro'=>'Tarefa não encontrada'],404);
         $this->json(['mensagem'=>$status==='concluido'?'Tarefa concluída':'Tarefa cancelada']);
-    }
-
-    public function quizQuestions(): never
-    {
-        $this->auth->user(['admin']);
-        $stmt=$this->db->prepare('SELECT q.id,q.texto_pergunta,q.explicacao,q.pontos_recompensa,q.licao_id,l.titulo licao FROM pergunta_quiz q LEFT JOIN licao l ON l.id=q.licao_id ORDER BY q.id DESC'); $stmt->execute();
-        $rows=$stmt->fetchAll(); $opts=$this->db->prepare('SELECT id,texto_opcao,is_correta FROM opcao_quiz WHERE pergunta_id=? ORDER BY id');
-        foreach($rows as &$row){$opts->execute([(int)$row['id']]);$row['opcoes']=$opts->fetchAll();}
-        $this->json(['perguntas'=>$rows]);
-    }
-
-    public function saveQuestion(?int $id): never
-    {
-        $admin=$this->auth->user(['admin']); $data=$this->input(); $options=$data['opcoes']??[];
-        $wasEdit=$id!==null;
-        if(trim((string)($data['texto_pergunta']??''))===''||count($options)!==4||count(array_filter($options,fn($o)=>(bool)($o['is_correta']??false)))!==1)$this->json(['erro'=>'Preencha a pergunta, as 4 opções e marque uma correta'],422);
-        try{$this->db->beginTransaction();
-            if($id){$stmt=$this->db->prepare('UPDATE pergunta_quiz SET licao_id=?,texto_pergunta=?,explicacao=?,pontos_recompensa=? WHERE id=?');$stmt->execute([(int)$data['licao_id'],trim($data['texto_pergunta']),trim((string)($data['explicacao']??''))?:null,(int)$data['pontos_recompensa'],$id]);$del=$this->db->prepare('DELETE FROM opcao_quiz WHERE pergunta_id=?');$del->execute([$id]);}
-            else{$stmt=$this->db->prepare('INSERT INTO pergunta_quiz (criador_id,licao_id,texto_pergunta,explicacao,pontos_recompensa) VALUES (?,?,?,?,?)');$stmt->execute([(int)$admin['id'],(int)$data['licao_id'],trim($data['texto_pergunta']),trim((string)($data['explicacao']??''))?:null,(int)$data['pontos_recompensa']]);$id=(int)$this->db->lastInsertId();}
-            $opt=$this->db->prepare('INSERT INTO opcao_quiz (pergunta_id,texto_opcao,is_correta) VALUES (?,?,?)');foreach($options as $o)$opt->execute([$id,trim((string)$o['texto_opcao']),(int)(bool)$o['is_correta']]);
-            $this->db->commit();$this->json(['mensagem'=>'Pergunta salva com sucesso','id'=>$id],$wasEdit?200:201);
-        }catch(Throwable $e){if($this->db->inTransaction())$this->db->rollBack();throw $e;}
-    }
-
-    public function deleteQuestion(int $id): never
-    {
-        $this->auth->user(['admin']);$stmt=$this->db->prepare('DELETE FROM pergunta_quiz WHERE id=?');$stmt->execute([$id]);if(!$stmt->rowCount())$this->json(['erro'=>'Pergunta não encontrada'],404);$this->json(['mensagem'=>'Pergunta excluída']);
     }
 
     public function directorDashboard(): never

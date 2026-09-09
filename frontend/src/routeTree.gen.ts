@@ -15,7 +15,9 @@ import { Route as PerfilRouteImport } from './routes/perfil'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as JardimRouteImport } from './routes/jardim'
 import { Route as HorariosRouteImport } from './routes/horarios'
+import { Route as HistoricoRouteImport } from './routes/historico'
 import { Route as DiretorRouteImport } from './routes/diretor'
+import { Route as CursosRouteImport } from './routes/cursos'
 import { Route as AprenderRouteImport } from './routes/aprender'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
@@ -52,9 +54,19 @@ const HorariosRoute = HorariosRouteImport.update({
   path: '/horarios',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HistoricoRoute = HistoricoRouteImport.update({
+  id: '/historico',
+  path: '/historico',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DiretorRoute = DiretorRouteImport.update({
   id: '/diretor',
   path: '/diretor',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CursosRoute = CursosRouteImport.update({
+  id: '/cursos',
+  path: '/cursos',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AprenderRoute = AprenderRouteImport.update({
@@ -87,7 +99,9 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/aprender': typeof AprenderRoute
+  '/cursos': typeof CursosRoute
   '/diretor': typeof DiretorRoute
+  '/historico': typeof HistoricoRoute
   '/horarios': typeof HorariosRoute
   '/jardim': typeof JardimRoute
   '/login': typeof LoginRoute
@@ -101,7 +115,9 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/aprender': typeof AprenderRoute
+  '/cursos': typeof CursosRoute
   '/diretor': typeof DiretorRoute
+  '/historico': typeof HistoricoRoute
   '/horarios': typeof HorariosRoute
   '/jardim': typeof JardimRoute
   '/login': typeof LoginRoute
@@ -116,7 +132,9 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/aprender': typeof AprenderRoute
+  '/cursos': typeof CursosRoute
   '/diretor': typeof DiretorRoute
+  '/historico': typeof HistoricoRoute
   '/horarios': typeof HorariosRoute
   '/jardim': typeof JardimRoute
   '/login': typeof LoginRoute
@@ -132,7 +150,9 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/aprender'
+    | '/cursos'
     | '/diretor'
+    | '/historico'
     | '/horarios'
     | '/jardim'
     | '/login'
@@ -146,7 +166,9 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/aprender'
+    | '/cursos'
     | '/diretor'
+    | '/historico'
     | '/horarios'
     | '/jardim'
     | '/login'
@@ -160,7 +182,9 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/aprender'
+    | '/cursos'
     | '/diretor'
+    | '/historico'
     | '/horarios'
     | '/jardim'
     | '/login'
@@ -175,7 +199,9 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRouteWithChildren
   AprenderRoute: typeof AprenderRoute
+  CursosRoute: typeof CursosRoute
   DiretorRoute: typeof DiretorRoute
+  HistoricoRoute: typeof HistoricoRoute
   HorariosRoute: typeof HorariosRoute
   JardimRoute: typeof JardimRoute
   LoginRoute: typeof LoginRoute
@@ -229,11 +255,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HorariosRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/historico': {
+      id: '/historico'
+      path: '/historico'
+      fullPath: '/historico'
+      preLoaderRoute: typeof HistoricoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/diretor': {
       id: '/diretor'
       path: '/diretor'
       fullPath: '/diretor'
       preLoaderRoute: typeof DiretorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cursos': {
+      id: '/cursos'
+      path: '/cursos'
+      fullPath: '/cursos'
+      preLoaderRoute: typeof CursosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/aprender': {
@@ -288,7 +328,9 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
   AprenderRoute: AprenderRoute,
+  CursosRoute: CursosRoute,
   DiretorRoute: DiretorRoute,
+  HistoricoRoute: HistoricoRoute,
   HorariosRoute: HorariosRoute,
   JardimRoute: JardimRoute,
   LoginRoute: LoginRoute,

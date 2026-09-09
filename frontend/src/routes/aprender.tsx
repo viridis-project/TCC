@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "motion/react";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -249,27 +249,31 @@ function CelebrationModal({ open, onClose, xp }: { open: boolean; onClose: () =>
 }
 
 function LearnPage() {
-  const { data: user, isLoading: loadingUser, error: userError } = useQuery(userQuery());
-  const { data: apiModules, isLoading: loadingModules, error: modulesError } = useQuery({
-    queryKey: ["modulos"],
+  const { data: user, isPending: loadingUser, error: userError } = useQuery(userQuery());
+  const { data: apiModules, isPending: loadingModules, error: modulesError } = useQuery({
+    queryKey: ["modulos", user?.id],
     queryFn: async () => (await apiFetch<{ modulos: ApiModule[] }>("/modulos")).modulos,
-    enabled: isBrowser,
+    enabled: isBrowser && !!user,
     retry: false,
   });
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState<Lesson | null>(null);
   const [quizLesson, setQuizLesson] = useState<Lesson | null>(null);
   const [celebrate, setCelebrate] = useState<number | null>(null);
+  const [courseId, setCourseId] = useState<number | null>(null);
+  const courses = [...new Map((apiModules ?? []).map((module) => [module.curso_id, { id: module.curso_id, title: module.curso_titulo, description: module.curso_descricao, scope: module.escopo }])).values()];
+  const activeCourse = courses.find((course) => course.id === courseId) ?? courses[0];
 
-  const modules: Module[] = (apiModules ?? []).map((m) => ({
+  const modules: Module[] = (apiModules ?? []).filter((module) => module.curso_id === activeCourse?.id).map((m) => ({
     id: m.id, title: m.titulo, description: m.descricao, color: m.cor, progress: m.progresso,
     lessons: m.licoes.map((l) => ({ id: l.id, title: l.titulo, status: l.status, kind: l.kind, xp: l.xp })),
   }));
   const totalXP = user?.xp ?? 0;
   const pct = user?.xp_proximo_nivel ? Math.min(100, Math.round((totalXP / user.xp_proximo_nivel) * 100)) : 0;
 
-  if (loadingUser || loadingModules) return <PageShell><div className="p-16 text-center text-muted-foreground">Carregando sua trilha...</div></PageShell>;
+  if (loadingUser) return <PageShell><div role="status" className="p-16 text-center text-muted-foreground">Carregando sua trilha...</div></PageShell>;
   if (userError || modulesError || !user) return <PageShell><div className="p-16 text-center text-destructive">{userError?.message ?? modulesError?.message ?? "Faça login para continuar"}</div></PageShell>;
+  if (loadingUser || loadingModules) return <PageShell><div className="p-16 text-center text-muted-foreground">Carregando sua trilha...</div></PageShell>;
 
   return (
     <PageShell>
@@ -284,6 +288,7 @@ function LearnPage() {
       </div>
 
       <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
+        {user.perfil_nome !== "aluno" && <Link to="/cursos" className="mb-6 flex items-center justify-between gap-3 rounded-2xl border border-primary/30 bg-primary/5 p-5 font-bold text-primary"><span>Gerenciar cursos, módulos e perguntas</span><BookOpen className="h-5 w-5 shrink-0" /></Link>}
         {/* HUD */}
         <motion.div
           initial={{ opacity: 0, y: -8 }}
@@ -322,6 +327,12 @@ function LearnPage() {
 
         {/* Trilha */}
         <div className="mt-6">
+          <h1 className="text-2xl font-extrabold">Seus cursos</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Conteúdo do Viridis, da sua escola e da sua turma.</p>
+          {courses.length === 0 ? <div className="mt-4 rounded-2xl border border-dashed border-border p-8 text-center text-muted-foreground">Nenhum curso publicado disponível para você no momento.</div> : <>
+            <div className="my-5 grid gap-3 sm:grid-cols-2">{courses.map((course) => <button key={course.id} aria-pressed={activeCourse?.id === course.id} onClick={() => { setCourseId(course.id); setSelected(null); setQuizLesson(null); }} className={`rounded-2xl border p-4 text-left transition-colors ${activeCourse?.id === course.id ? "border-primary bg-primary/10" : "border-border bg-card hover:bg-accent"}`}><p className="text-xs font-bold uppercase tracking-wide text-primary">{({ app: "Viridis", escola: "Sua escola", turma: "Sua turma" })[course.scope]}</p><h2 className="mt-1 break-words font-bold">{course.title}</h2><p className="mt-1 line-clamp-2 break-words text-xs text-muted-foreground">{course.description}</p></button>)}</div>
+            <h2 className="mb-4 break-words text-lg font-extrabold">{activeCourse?.title}</h2>
+          </>}
           {modules.map((m, mi) => (
             <section key={m.id}>
               <ModuleHeader module={m} index={mi} />

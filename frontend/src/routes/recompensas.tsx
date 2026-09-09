@@ -73,6 +73,7 @@ function RewardsPage() {
         onOpenChange={(v) => !v && setSelected(null)}
         onConfirm={async (reward) => {
           await apiFetch("/resgates", { method:"POST", body:JSON.stringify({ recompensa_id:reward.id }) });
+          await queryClient.invalidateQueries({ queryKey:["historico"] });
           await queryClient.invalidateQueries({ queryKey:["perfil"] });
         }}
       />

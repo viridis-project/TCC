@@ -6,6 +6,7 @@ namespace Viridis\controllers;
 
 use PDO;
 use Viridis\middleware\AuthMiddleware;
+use Viridis\services\LearningAccess;
 
 final class OperationalController extends Controller
 {
@@ -77,10 +78,10 @@ final class OperationalController extends Controller
     public function certificates(): never
     {
         $user=$this->auth->user(['aluno']);
-        $total=$this->db->prepare('SELECT COUNT(*) FROM licao'); $total->execute();
-        $totalLessons=(int)$total->fetchColumn();
-        $done=$this->db->prepare("SELECT COUNT(*) FROM usuario_licao_progresso WHERE usuario_id=? AND status='completed'"); $done->execute([(int)$user['id']]);
-        $eligible=$totalLessons>0 && (int)$done->fetchColumn()===$totalLessons;
+        $modules=(new LearningAccess($this->db))->modules($user);
+        $lessons=array_merge([], ...array_column($modules,'licoes'));
+        $totalLessons=count($lessons);
+        $eligible=$totalLessons>0 && count(array_filter($lessons,fn($l)=>$l['status']==='completed'))===$totalLessons;
         if ($eligible) {
             $check=$this->db->prepare('SELECT id FROM certificado WHERE aluno_id=? LIMIT 1'); $check->execute([(int)$user['id']]);
             if (!$check->fetchColumn()) {

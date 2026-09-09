@@ -10,6 +10,8 @@ use Throwable;
 use Viridis\middleware\AuthMiddleware;
 use Viridis\models\Missao;
 use Viridis\models\Usuario;
+use Viridis\services\LearningAccess;
+use Viridis\services\LearningException;
 
 final class ApiController extends Controller
 {
@@ -41,43 +43,16 @@ final class ApiController extends Controller
     public function modulos(): never
     {
         $user = $this->auth->user();
-        $stmt = $this->db->prepare(
-            "SELECT m.id modulo_id,m.titulo modulo_titulo,m.descricao,m.cor,m.ordem modulo_ordem,
-                    l.id licao_id,l.titulo licao_titulo,l.kind,l.xp,l.ordem licao_ordem,
-                    COALESCE(ulp.status, CASE WHEN m.ordem=1 AND l.ordem=1 THEN 'current' ELSE 'locked' END) status
-             FROM modulo m JOIN licao l ON l.modulo_id=m.id
-             LEFT JOIN usuario_licao_progresso ulp ON ulp.licao_id=l.id AND ulp.usuario_id=?
-             ORDER BY m.ordem,l.ordem"
-        );
-        $stmt->execute([(int) $user['id']]);
-        $modules = [];
-        foreach ($stmt->fetchAll() as $row) {
-            $id = (int) $row['modulo_id'];
-            if (!isset($modules[$id])) $modules[$id] = [
-                'id'=>$id,'titulo'=>$row['modulo_titulo'],'descricao'=>$row['descricao'],'cor'=>$row['cor'],
-                'ordem'=>(int)$row['modulo_ordem'],'progresso'=>0,'licoes'=>[]
-            ];
-            $modules[$id]['licoes'][] = ['id'=>(int)$row['licao_id'],'titulo'=>$row['licao_titulo'],'kind'=>$row['kind'],'xp'=>(int)$row['xp'],'ordem'=>(int)$row['licao_ordem'],'status'=>$row['status']];
-        }
-        foreach ($modules as &$module) {
-            $total = count($module['licoes']);
-            $done = count(array_filter($module['licoes'], fn($l) => $l['status']==='completed'));
-            $module['progresso'] = $total ? (int) round($done * 100 / $total) : 0;
-        }
-        $this->json(['modulos' => array_values($modules)]);
+        $this->json(['modulos' => (new LearningAccess($this->db))->modules($user)]);
     }
 
     public function quiz(int $lessonId): never
     {
-        $this->auth->user();
-        $stmt = $this->db->prepare('SELECT id,texto_pergunta,explicacao,pontos_recompensa FROM pergunta_quiz WHERE licao_id=? ORDER BY id');
+        $user=$this->auth->user();
+        (new LearningAccess($this->db))->playableLesson($user,$lessonId);
+        $stmt = $this->db->prepare('SELECT id,texto_pergunta,pontos_recompensa FROM pergunta_quiz WHERE licao_id=? AND ativo=1 ORDER BY id');
         $stmt->execute([$lessonId]);
         $questions = $stmt->fetchAll();
-        if ($questions === []) {
-            $fallback = $this->db->prepare('SELECT id,texto_pergunta,explicacao,pontos_recompensa FROM pergunta_quiz ORDER BY id LIMIT 4');
-            $fallback->execute();
-            $questions = $fallback->fetchAll();
-        }
         $opt = $this->db->prepare('SELECT id,texto_opcao FROM opcao_quiz WHERE pergunta_id=? ORDER BY id');
         foreach ($questions as &$question) {
             $opt->execute([(int) $question['id']]);
@@ -96,6 +71,10 @@ final class ApiController extends Controller
         if (!is_array($answers) || $answers === []) $this->json(['erro' => 'Envie suas respostas'], 422);
         try {
             $this->db->beginTransaction();
+            // Serialize with publication/editor changes and reject lessons outside the user's audience.
+            $courseLock=$this->db->prepare('SELECT c.id FROM curso c JOIN modulo m ON m.curso_id=c.id JOIN licao l ON l.modulo_id=m.id WHERE l.id=? FOR UPDATE');
+            $courseLock->execute([$lessonId]);
+            (new LearningAccess($this->db))->playableLesson($user,$lessonId);
             $lesson = $this->db->prepare('SELECT id,xp FROM licao WHERE id=? FOR UPDATE');
             $lesson->execute([$lessonId]);
             $lessonRow = $lesson->fetch();
@@ -106,13 +85,22 @@ final class ApiController extends Controller
             $check = $this->db->prepare(
                 'SELECT pq.id pergunta_id,pq.pontos_recompensa,oq.is_correta
                  FROM pergunta_quiz pq JOIN opcao_quiz oq ON oq.pergunta_id=pq.id
-                 WHERE pq.id=? AND oq.id=? AND (pq.licao_id=? OR NOT EXISTS (SELECT 1 FROM pergunta_quiz px WHERE px.licao_id=?))'
+                 WHERE pq.id=? AND oq.id=? AND pq.licao_id=? AND pq.ativo=1'
             );
             $record = $this->db->prepare('INSERT INTO progresso_quiz (aluno_id,pergunta_id,acertou) VALUES (?,?,?)');
             $correct = 0; $points = 0;
+            $expected=$this->db->prepare('SELECT id FROM pergunta_quiz WHERE licao_id=? AND ativo=1 ORDER BY id');$expected->execute([$lessonId]);
+            $expectedIds=array_map('intval',$expected->fetchAll(PDO::FETCH_COLUMN));
+            $answerIds=[];
+            foreach ($answers as $answer) {
+                if (!is_array($answer)) throw new LearningException('Resposta inválida',422);
+                $answerIds[]=(int)($answer['pergunta_id']??0);
+            }
+            sort($answerIds);
+            if ($expectedIds===[] || $answerIds!==$expectedIds) throw new LearningException('Responda cada pergunta desta lição exatamente uma vez',422);
             foreach ($answers as $answer) {
                 $qid = (int)($answer['pergunta_id'] ?? 0); $oid = (int)($answer['opcao_id'] ?? 0);
-                $check->execute([$qid,$oid,$lessonId,$lessonId]);
+                $check->execute([$qid,$oid,$lessonId]);
                 $result = $check->fetch();
                 if (!$result) { $this->db->rollBack(); $this->json(['erro'=>'Resposta inválida'],422); }
                 $right = (int)$result['is_correta'] === 1;
@@ -132,7 +120,6 @@ final class ApiController extends Controller
                      ultima_atividade_em=CURDATE() WHERE id=?'
                 );
                 $update->execute([$xp,$points,$xp,$xp,(int)$user['id']]);
-                $this->unlockNextLesson((int)$user['id'],$lessonId);
                 $this->checkAchievements((int)$user['id']);
             }
             $this->db->commit();
@@ -170,6 +157,28 @@ final class ApiController extends Controller
         $stmt = $this->db->prepare("INSERT INTO submissao_missao (aluno_id,missao_id,descricao,url_foto,status) VALUES (?,?,?,?,'pending')");
         $stmt->execute([(int)$user['id'],$missionId,$description,'/uploads/'.$name]);
         $this->json(['mensagem'=>'Atividade enviada para verificação','id'=>(int)$this->db->lastInsertId()],201);
+    }
+
+    public function history(): never
+    {
+        $user = $this->auth->user();
+        $userId = (int)$user['id'];
+        $plants = $this->db->prepare(
+            "SELECT s.id,s.descricao,s.url_foto,s.status,s.comentario_professor,
+                    s.data_envio,s.revisado_em,m.titulo
+             FROM submissao_missao s JOIN missao m ON m.id=s.missao_id
+             WHERE s.aluno_id=? AND m.tipo='plant'
+             ORDER BY s.data_envio DESC,s.id DESC"
+        );
+        $plants->execute([$userId]);
+        $rewards = $this->db->prepare(
+            'SELECT r.id,r.pontos_debitados,r.criado_em,c.titulo,p.nome parceiro
+             FROM resgate r LEFT JOIN recompensa c ON c.id=r.recompensa_id
+             LEFT JOIN parceiro p ON p.id=c.parceiro_id
+             WHERE r.usuario_id=? ORDER BY r.criado_em DESC,r.id DESC'
+        );
+        $rewards->execute([$userId]);
+        $this->json(['plantios'=>$plants->fetchAll(),'recompensas'=>$rewards->fetchAll()]);
     }
 
     public function submissions(): never
@@ -271,23 +280,18 @@ final class ApiController extends Controller
         ]]);
     }
 
-    private function unlockNextLesson(int $userId,int $lessonId): void
-    {
-        $stmt=$this->db->prepare('SELECT l2.id FROM licao l1 JOIN modulo m1 ON m1.id=l1.modulo_id JOIN licao l2 JOIN modulo m2 ON m2.id=l2.modulo_id WHERE l1.id=? AND (m2.ordem>m1.ordem OR (m2.ordem=m1.ordem AND l2.ordem>l1.ordem)) ORDER BY m2.ordem,l2.ordem LIMIT 1');
-        $stmt->execute([$lessonId]); $next=$stmt->fetchColumn();
-        if ($next) { $up=$this->db->prepare("INSERT INTO usuario_licao_progresso (usuario_id,licao_id,status) VALUES (?,?,'current') ON DUPLICATE KEY UPDATE status=IF(status='locked','current',status)"); $up->execute([$userId,(int)$next]); }
-    }
-
     private function checkAchievements(int $userId): void
     {
+        $u=$this->db->prepare('SELECT u.id,u.turma_id,COALESCE(t.instituicao_id,u.instituicao_id) instituicao_id FROM usuario u LEFT JOIN turma_escolar t ON t.id=u.turma_id WHERE u.id=?');$u->execute([$userId]);
+        $modules=(new LearningAccess($this->db))->modules($u->fetch());
         $stmt=$this->db->prepare('SELECT id,regra FROM conquista'); $stmt->execute();
         $insert=$this->db->prepare('INSERT IGNORE INTO usuario_conquista (usuario_id,conquista_id) VALUES (?,?)');
         foreach ($stmt->fetchAll() as $achievement) {
             $earned=false; $rule=$achievement['regra'];
             if ($rule==='licoes:1') { $q=$this->db->prepare("SELECT COUNT(*) FROM usuario_licao_progresso WHERE usuario_id=? AND status='completed'"); $q->execute([$userId]); $earned=(int)$q->fetchColumn()>=1; }
             elseif (str_starts_with($rule,'streak:')) { $q=$this->db->prepare('SELECT streak_dias FROM usuario WHERE id=?'); $q->execute([$userId]); $earned=(int)$q->fetchColumn()>=(int)substr($rule,7); }
-            elseif (str_starts_with($rule,'modulo_completo:')) { $q=$this->db->prepare("SELECT COUNT(*)=SUM(CASE WHEN ulp.status='completed' THEN 1 ELSE 0 END) FROM licao l LEFT JOIN usuario_licao_progresso ulp ON ulp.licao_id=l.id AND ulp.usuario_id=? JOIN modulo m ON m.id=l.modulo_id WHERE m.ordem=?"); $q->execute([$userId,(int)substr($rule,16)]); $earned=(bool)$q->fetchColumn(); }
-            elseif ($rule==='todos_modulos') { $q=$this->db->prepare("SELECT COUNT(*)=(SELECT COUNT(*) FROM usuario_licao_progresso WHERE usuario_id=? AND status='completed') FROM licao"); $q->execute([$userId]); $earned=(bool)$q->fetchColumn(); }
+            elseif (str_starts_with($rule,'modulo_completo:')) { $earned=count(array_filter($modules,fn($m)=>$m['ordem']===(int)substr($rule,16) && $m['progresso']===100))>0; }
+            elseif ($rule==='todos_modulos') { $earned=count($modules)>0 && count(array_filter($modules,fn($m)=>$m['progresso']===100))===count($modules); }
             if ($earned) $insert->execute([$userId,(int)$achievement['id']]);
         }
     }
