@@ -230,7 +230,7 @@ final class ApiController extends Controller
     public function rewards(): never
     {
         $user=$this->auth->user();
-        $stmt=$this->db->prepare("SELECT r.id,r.titulo,r.escopo,r.pontos_necessarios pontos,r.imagem,p.id parceiro_id,p.nome parceiro,p.tipo FROM recompensa r JOIN parceiro p ON p.id=r.parceiro_id WHERE r.ativo=1 AND p.ativo=1 AND (r.escopo='app' OR (r.escopo='escola' AND r.instituicao_id=?)) ORDER BY r.escopo DESC,r.pontos_necessarios");
+        $stmt=$this->db->prepare("SELECT r.id,r.titulo,r.escopo,r.pontos_necessarios pontos,r.imagem,p.id parceiro_id,p.nome parceiro,p.tipo FROM recompensa r LEFT JOIN parceiro p ON p.id=r.parceiro_id WHERE r.ativo=1 AND (p.id IS NULL OR p.ativo=1) AND (r.escopo='app' OR (r.escopo='escola' AND r.instituicao_id=?)) ORDER BY r.escopo DESC,r.pontos_necessarios");
         $stmt->execute([(int)($user['instituicao_id']??0)]); $this->json(['recompensas'=>$stmt->fetchAll()]);
     }
 

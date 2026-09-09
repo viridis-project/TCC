@@ -30,7 +30,7 @@ try {
     $garden = new GardenController($db, $auth);
     $learning = new LearningController($db, $auth);
     $partners = new PartnerController($db, $auth);
-    $v2 = new V2Controller($db, $auth);
+    $v2 = new V2Controller($db, $auth, $config);
     $director = new DirectorController($db, $auth);
     $invites = new ConviteProfessorController($db, $auth, $config);
     $authController = new AuthController($db);
@@ -118,10 +118,12 @@ try {
     if ($route('DELETE','#^/api/diretor/convites-professor/(\d+)$#',[$invites,'cancel'])) exit;
     if ($route('GET','#^/api/admin/recompensas$#',fn()=>$v2->managedRewards('app','GET'))) exit;
     if ($route('POST','#^/api/admin/recompensas$#',fn()=>$v2->managedRewards('app','POST'))) exit;
+    if ($route('POST','#^/api/admin/recompensas/(\d+)$#',fn($id)=>$v2->managedRewards('app','PUT',$id))) exit;
     if ($route('PUT','#^/api/admin/recompensas/(\d+)$#',fn($id)=>$v2->managedRewards('app','PUT',$id))) exit;
     if ($route('DELETE','#^/api/admin/recompensas/(\d+)$#',fn($id)=>$v2->managedRewards('app','DELETE',$id))) exit;
     if ($route('GET','#^/api/diretor/recompensas$#',fn()=>$v2->managedRewards('escola','GET'))) exit;
     if ($route('POST','#^/api/diretor/recompensas$#',fn()=>$v2->managedRewards('escola','POST'))) exit;
+    if ($route('POST','#^/api/diretor/recompensas/(\d+)$#',fn($id)=>$v2->managedRewards('escola','PUT',$id))) exit;
     if ($route('PUT','#^/api/diretor/recompensas/(\d+)$#',fn($id)=>$v2->managedRewards('escola','PUT',$id))) exit;
     if ($route('DELETE','#^/api/diretor/recompensas/(\d+)$#',fn($id)=>$v2->managedRewards('escola','DELETE',$id))) exit;
 

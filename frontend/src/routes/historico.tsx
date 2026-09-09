@@ -63,7 +63,7 @@ function HistoryPage() {
     return (
       <PageShell>
         <div className="mx-auto max-w-lg space-y-4 px-4 py-16 text-center">
-          <h1 className="text-2xl font-extrabold">Meu histórico</h1>
+          <h1 className="text-2xl font-bold">Meu histórico</h1>
           <p role="alert">{user.error?.message ?? "Faça login para consultar seu histórico."}</p>
           <Link to="/login" className={buttonStyle}>
             Entrar na minha conta
@@ -101,12 +101,12 @@ function HistoryPage() {
   const spent = recompensas.reduce((total, reward) => total + Number(reward.pontos_debitados), 0);
   return (
     <PageShell>
-      <div className="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
-        <section className="rounded-3xl bg-gradient-hero p-6 text-primary-foreground shadow-elevated sm:p-8">
-          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-white/70">
+      <div className="app-page space-y-6">
+        <section className="rounded-xl bg-gradient-hero p-6 text-primary-foreground shadow-soft sm:p-8">
+          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-white/70">
             <History className="h-4 w-4" /> Sua trajetória no Viridis
           </div>
-          <h1 className="mt-2 text-3xl font-extrabold">Meu histórico</h1>
+          <h1 className="mt-2 text-3xl font-bold">Meu histórico</h1>
           <p className="mt-2 text-sm text-white/80">
             Acompanhe seus plantios e as recompensas que você já resgatou.
           </p>
@@ -120,11 +120,11 @@ function HistoryPage() {
           ].map(({ label, value, icon: Icon }) => (
             <div
               key={label}
-              className="flex items-center gap-4 rounded-2xl border border-border/60 bg-card p-5 shadow-soft"
+              className="flex items-center gap-4 rounded-lg border border-border/60 bg-card p-5 shadow-soft"
             >
               <Icon className="h-6 w-6 shrink-0 text-primary" />
               <div>
-                <p className="text-2xl font-extrabold">{value.toLocaleString("pt-BR")}</p>
+                <p className="text-2xl font-bold">{value.toLocaleString("pt-BR")}</p>
                 <p className="text-sm text-muted-foreground">{label}</p>
               </div>
             </div>
@@ -144,7 +144,7 @@ function HistoryPage() {
           <TabsContent value="plantios" className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h2 className="text-xl font-extrabold">Histórico de plantios</h2>
+                <h2 className="text-xl font-bold">Histórico de plantios</h2>
                 <p className="text-sm text-muted-foreground">Do mais recente ao mais antigo.</p>
               </div>
               <div className="flex items-center gap-2">
@@ -170,7 +170,7 @@ function HistoryPage() {
               </div>
             </div>
             {filtered.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-border p-8 text-center">
+              <div className="rounded-lg border border-dashed border-border p-8 text-center">
                 <Sprout className="mx-auto mb-3 h-8 w-8 text-primary" />
                 <p className="font-semibold">
                   {plantios.length
@@ -186,7 +186,7 @@ function HistoryPage() {
                 {filtered.slice((plantPage - 1) * 10, plantPage * 10).map((plant) => (
                   <li
                     key={plant.id}
-                    className="overflow-hidden rounded-2xl border border-border/60 bg-card p-5 shadow-soft"
+                    className="overflow-hidden rounded-lg border border-border/60 bg-card p-5 shadow-soft"
                   >
                     <div className="flex flex-col gap-4 sm:flex-row">
                       {plant.url_foto && (
@@ -239,13 +239,13 @@ function HistoryPage() {
 
           <TabsContent value="recompensas" className="space-y-4">
             <div>
-              <h2 className="text-xl font-extrabold">Histórico de recompensas</h2>
+              <h2 className="text-xl font-bold">Histórico de recompensas</h2>
               <p className="text-sm text-muted-foreground">
                 Seus resgates confirmados, do mais recente ao mais antigo.
               </p>
             </div>
             {recompensas.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-border p-8 text-center">
+              <div className="rounded-lg border border-dashed border-border p-8 text-center">
                 <Gift className="mx-auto mb-3 h-8 w-8 text-primary" />
                 <p className="font-semibold">Você ainda não resgatou recompensas.</p>
                 <Link to="/recompensas" className={`${buttonStyle} mt-4`}>
@@ -257,7 +257,7 @@ function HistoryPage() {
                 {recompensas.slice((rewardPage - 1) * 10, rewardPage * 10).map((reward) => (
                   <li
                     key={reward.id}
-                    className="flex flex-wrap items-center gap-4 rounded-2xl border border-border/60 bg-card p-5 shadow-soft"
+                    className="flex flex-wrap items-center gap-4 rounded-lg border border-border/60 bg-card p-5 shadow-soft"
                   >
                     <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
                       <Gift className="h-6 w-6" />

@@ -71,7 +71,7 @@ const secondary =
   "inline-flex items-center justify-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm font-semibold hover:bg-accent disabled:opacity-50";
 const input =
   "w-full min-w-0 rounded-xl border border-input bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30";
-const card = "rounded-2xl border border-border/60 bg-card p-5 shadow-soft";
+const card = "rounded-lg border border-border/60 bg-card p-5 shadow-soft";
 const scopeLabel = {
   app: "Todos os usuários",
   escola: "Toda a escola",
@@ -133,12 +133,12 @@ export function CourseManagement({ user }: { user: User }) {
       (!classFilter || String(item.turma_id) === classFilter),
   );
   return (
-    <div className="mx-auto max-w-6xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
-      <section className="rounded-3xl bg-gradient-hero p-6 text-primary-foreground shadow-elevated sm:p-8">
-        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-white/70">
+    <div className="app-page max-w-6xl space-y-6">
+      <section className="rounded-xl bg-gradient-hero p-6 text-primary-foreground shadow-soft sm:p-8">
+        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-white/70">
           <GraduationCap className="h-4 w-4" /> Gestão de aprendizagem
         </div>
-        <h1 className="mt-2 text-3xl font-extrabold">Cursos e quizzes</h1>
+        <h1 className="mt-2 text-3xl font-bold">Cursos e quizzes</h1>
         <p className="mt-2 max-w-2xl text-sm text-white/80">{audience}</p>
         <p className="mt-4 text-xs text-white/70">
           Monte os módulos, adicione lições e perguntas e publique quando estiver pronto.
@@ -147,7 +147,7 @@ export function CourseManagement({ user }: { user: User }) {
       {selected === null ? (
         <>
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-xl font-extrabold">Meus cursos</h2>
+            <h2 className="text-xl font-bold">Meus cursos</h2>
             <button
               className={primary}
               disabled={
@@ -246,7 +246,7 @@ export function CourseManagement({ user }: { user: User }) {
                 <div className={`${card} space-y-4`}>
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <h2 className="break-words text-2xl font-extrabold">{course.titulo}</h2>
+                      <h2 className="break-words text-2xl font-bold">{course.titulo}</h2>
                       <p className="mt-1 whitespace-pre-wrap break-words text-sm text-muted-foreground">
                         {course.descricao}
                       </p>
@@ -312,7 +312,7 @@ export function CourseManagement({ user }: { user: User }) {
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <h2 className="text-xl font-extrabold">Módulos do curso</h2>
+                  <h2 className="text-xl font-bold">Módulos do curso</h2>
                   <button
                     className={primary}
                     disabled={busy}
@@ -562,7 +562,7 @@ function BasicForm({
   const [color, setColor] = useState(
     editor.kind === "modulo" && /^#[\da-f]{6}$/i.test(editor.item?.cor ?? "")
       ? editor.item!.cor
-      : "#16803c",
+      : "var(--color-primary)",
   );
   const [classId, setClassId] = useState("");
   const plural = { curso: "cursos", modulo: "modulos", licao: "licoes" };
@@ -603,7 +603,7 @@ function BasicForm({
         if (!open && !mutation.isPending) close();
       }}
     >
-      <DialogContent className="max-h-[90dvh] overflow-y-auto rounded-3xl sm:max-w-xl">
+      <DialogContent className="max-h-[90dvh] overflow-y-auto rounded-xl sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>
             {editor.item ? "Editar" : "Criar"} {label}
@@ -778,7 +778,7 @@ function QuestionForm({
         if (!open && !mutation.isPending) close();
       }}
     >
-      <DialogContent className="max-h-[90dvh] overflow-y-auto rounded-3xl sm:max-w-2xl">
+      <DialogContent className="max-h-[90dvh] overflow-y-auto rounded-xl sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{editor.item ? "Editar pergunta" : "Nova pergunta"}</DialogTitle>
           <DialogDescription>
@@ -959,7 +959,7 @@ function Loading() {
 }
 function Empty({ children }: { children: ReactNode }) {
   return (
-    <div className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
+    <div className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
       {children}
     </div>
   );

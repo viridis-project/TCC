@@ -1,20 +1,20 @@
 import type { ReactNode } from "react";
-import { motion } from "motion/react";
 import { SiteNav } from "./site-nav";
 import { SiteFooter } from "./site-footer";
 
 export function PageShell({ children }: { children: ReactNode }) {
   return (
-    <div className="flex min-h-screen flex-col">
-      <SiteNav />
-      <motion.main
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-        className="flex-1"
+    <div className="flex min-h-screen flex-col bg-background">
+      <a
+        href="#conteudo-principal"
+        className="fixed left-3 top-3 z-[100] -translate-y-20 rounded-lg bg-foreground px-4 py-2 text-sm font-semibold text-background shadow-elevated focus:translate-y-0"
       >
+        Pular para o conteúdo
+      </a>
+      <SiteNav />
+      <main id="conteudo-principal" tabIndex={-1} className="flex-1">
         {children}
-      </motion.main>
+      </main>
       <SiteFooter />
     </div>
   );

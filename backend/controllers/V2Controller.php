@@ -10,7 +10,7 @@ use Viridis\middleware\AuthMiddleware;
 
 final class V2Controller extends Controller
 {
-    public function __construct(private PDO $db, private AuthMiddleware $auth) {}
+    public function __construct(private PDO $db, private AuthMiddleware $auth, private array $config) {}
 
     public function notifications(string $action, ?int $id = null): never
     {
@@ -135,10 +135,35 @@ final class V2Controller extends Controller
     public function managedRewards(string $scope,string $method,?int $id=null): never
     {
         $roles=$scope==='app'?['admin']:['diretor'];$user=$this->auth->user($roles);$iid=$scope==='escola'?(int)$user['instituicao_id']:null;
-        if($method==='GET'){$stmt=$this->db->prepare('SELECT r.id,r.titulo,r.escopo,r.parceiro_id,p.nome parceiro,r.pontos_necessarios,r.imagem,r.ativo FROM recompensa r JOIN parceiro p ON p.id=r.parceiro_id WHERE r.escopo=? AND (? IS NULL OR r.instituicao_id=?) ORDER BY r.id DESC');$stmt->execute([$scope,$iid,$iid]);$p=$this->db->prepare('SELECT id,nome FROM parceiro WHERE ativo=1 ORDER BY nome');$p->execute();$this->json(['recompensas'=>$stmt->fetchAll(),'parceiros'=>$p->fetchAll()]);}
+        if($method==='GET'){$stmt=$this->db->prepare('SELECT r.id,r.titulo,r.escopo,r.parceiro_id,p.nome parceiro,r.pontos_necessarios,r.imagem,r.ativo FROM recompensa r LEFT JOIN parceiro p ON p.id=r.parceiro_id WHERE r.escopo=? AND (? IS NULL OR r.instituicao_id=?) ORDER BY r.id DESC');$stmt->execute([$scope,$iid,$iid]);$p=$this->db->prepare('SELECT id,nome FROM parceiro WHERE ativo=1 ORDER BY nome');$p->execute();$this->json(['recompensas'=>$stmt->fetchAll(),'parceiros'=>$p->fetchAll()]);}
         if($method==='DELETE'){$stmt=$this->db->prepare('DELETE FROM recompensa WHERE id=? AND escopo=? AND (? IS NULL OR instituicao_id=?)');$stmt->execute([$id,$scope,$iid,$iid]);if(!$stmt->rowCount())$this->json(['erro'=>'Recompensa não encontrada'],404);$this->json(['mensagem'=>'Recompensa excluída']);}
         $data=$this->input();if(trim((string)($data['titulo']??''))===''||(int)($data['pontos_necessarios']??0)<1)$this->json(['erro'=>'Informe título e pontos válidos'],422);
-        if($method==='POST'){$stmt=$this->db->prepare('INSERT INTO recompensa (titulo,escopo,parceiro_id,instituicao_id,pontos_necessarios,imagem,ativo) VALUES (?,?,?,?,?,?,?)');$stmt->execute([trim($data['titulo']),$scope,(int)$data['parceiro_id'],$iid,(int)$data['pontos_necessarios'],trim((string)($data['imagem']??''))?:null,(int)($data['ativo']??1)]);$this->json(['mensagem'=>'Recompensa criada'],201);}
-        $stmt=$this->db->prepare('UPDATE recompensa SET titulo=?,parceiro_id=?,pontos_necessarios=?,imagem=?,ativo=? WHERE id=? AND escopo=? AND (? IS NULL OR instituicao_id=?)');$stmt->execute([trim($data['titulo']),(int)$data['parceiro_id'],(int)$data['pontos_necessarios'],trim((string)($data['imagem']??''))?:null,(int)($data['ativo']??1),$id,$scope,$iid,$iid]);$this->json(['mensagem'=>'Recompensa atualizada']);
+        $partnerId=(int)($data['parceiro_id']??0);$partnerId=$partnerId>0?$partnerId:null;
+        if($method==='POST'){
+            $image=$this->storeRewardImage(true);
+            $stmt=$this->db->prepare('INSERT INTO recompensa (titulo,escopo,parceiro_id,instituicao_id,pontos_necessarios,imagem,ativo) VALUES (?,?,?,?,?,?,?)');
+            $stmt->execute([trim($data['titulo']),$scope,$partnerId,$iid,(int)$data['pontos_necessarios'],$image,(int)($data['ativo']??1)]);
+            $this->json(['mensagem'=>'Recompensa criada'],201);
+        }
+        $current=$this->db->prepare('SELECT imagem FROM recompensa WHERE id=? AND escopo=? AND (? IS NULL OR instituicao_id=?)');$current->execute([$id,$scope,$iid,$iid]);$image=$current->fetchColumn();
+        if($image===false)$this->json(['erro'=>'Recompensa não encontrada'],404);
+        if(isset($_FILES['foto'])&&$_FILES['foto']['error']!==UPLOAD_ERR_NO_FILE)$image=$this->storeRewardImage(true);
+        if(trim((string)$image)==='')$this->json(['erro'=>'Adicione uma imagem à recompensa'],422);
+        $stmt=$this->db->prepare('UPDATE recompensa SET titulo=?,parceiro_id=?,pontos_necessarios=?,imagem=?,ativo=? WHERE id=? AND escopo=? AND (? IS NULL OR instituicao_id=?)');$stmt->execute([trim($data['titulo']),$partnerId,(int)$data['pontos_necessarios'],$image,(int)($data['ativo']??1),$id,$scope,$iid,$iid]);$this->json(['mensagem'=>'Recompensa atualizada']);
+    }
+
+    private function storeRewardImage(bool $required): ?string
+    {
+        if(!isset($_FILES['foto'])||$_FILES['foto']['error']===UPLOAD_ERR_NO_FILE){if($required)$this->json(['erro'=>'Adicione uma imagem à recompensa'],422);return null;}
+        $file=$_FILES['foto'];
+        if($file['error']!==UPLOAD_ERR_OK)$this->json(['erro'=>'Não foi possível receber a imagem'],422);
+        if((int)$file['size']<1||(int)$file['size']>$this->config['upload_max_bytes'])$this->json(['erro'=>'A imagem deve ter no máximo 5 MB'],422);
+        $mime=(new \finfo(FILEINFO_MIME_TYPE))->file($file['tmp_name']);
+        $extensions=['image/jpeg'=>'jpg','image/png'=>'png','image/webp'=>'webp'];
+        if(!isset($extensions[$mime]))$this->json(['erro'=>'Use uma imagem JPG, PNG ou WebP'],422);
+        if(!is_dir($this->config['upload_dir'])&&!mkdir($this->config['upload_dir'],0750,true))$this->json(['erro'=>'Não foi possível preparar o armazenamento da imagem'],500);
+        $name='recompensa-'.bin2hex(random_bytes(16)).'.'.$extensions[$mime];
+        if(!move_uploaded_file($file['tmp_name'],$this->config['upload_dir'].'/'.$name))$this->json(['erro'=>'Não foi possível salvar a imagem'],500);
+        return '/uploads/'.$name;
     }
 }

@@ -452,7 +452,7 @@ CREATE TABLE `recompensa` (
   `id` int(11) NOT NULL,
   `titulo` varchar(150) NOT NULL,
   `escopo` enum('app','escola') NOT NULL DEFAULT 'app',
-  `parceiro_id` int(11) NOT NULL,
+  `parceiro_id` int(11) DEFAULT NULL,
   `instituicao_id` int(11) DEFAULT NULL,
   `pontos_necessarios` int(11) NOT NULL,
   `imagem` varchar(255) DEFAULT NULL,
@@ -1098,7 +1098,7 @@ ALTER TABLE `progresso_quiz`
 --
 ALTER TABLE `recompensa`
   ADD CONSTRAINT `fk_recompensa_instituicao` FOREIGN KEY (`instituicao_id`) REFERENCES `instituicao` (`id`),
-  ADD CONSTRAINT `fk_recompensa_parceiro` FOREIGN KEY (`parceiro_id`) REFERENCES `parceiro` (`id`);
+  ADD CONSTRAINT `fk_recompensa_parceiro` FOREIGN KEY (`parceiro_id`) REFERENCES `parceiro` (`id`) ON DELETE SET NULL;
 
 --
 -- Restrições para tabelas `resgate`

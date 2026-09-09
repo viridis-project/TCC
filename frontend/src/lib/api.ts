@@ -1,8 +1,18 @@
-export const API_URL = (import.meta.env.VITE_API_URL ?? "http://localhost:8081/api").replace(/\/$/, "");
-export const backendAsset = (path: string) => path.startsWith("http") ? path : `${new URL(API_URL).origin}${path}`;
+export const API_URL = (import.meta.env.VITE_API_URL ?? "http://localhost:8081/api").replace(
+  /\/$/,
+  "",
+);
+export const isImageSource = (value: string | null | undefined) =>
+  Boolean(value && /^(?:https?:\/\/|\/|blob:|data:image\/)/i.test(value));
+
+export const backendAsset = (path: string) =>
+  /^(?:https?:\/\/|blob:|data:)/i.test(path) ? path : `${new URL(API_URL).origin}${path}`;
 
 export class ApiError extends Error {
-  constructor(message: string, public status: number) {
+  constructor(
+    message: string,
+    public status: number,
+  ) {
     super(message);
     this.name = "ApiError";
   }
@@ -21,7 +31,10 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
     const detail = payload.detalhe ? ` (${payload.detalhe})` : "";
-    throw new ApiError(`${payload.erro ?? "Não foi possível concluir a operação"}${detail}`, response.status);
+    throw new ApiError(
+      `${payload.erro ?? "Não foi possível concluir a operação"}${detail}`,
+      response.status,
+    );
   }
   return payload as T;
 }

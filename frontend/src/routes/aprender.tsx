@@ -3,19 +3,39 @@ import { motion, AnimatePresence } from "motion/react";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  Lock, Check, Star, BookOpen, Trophy, GraduationCap,
-  Sparkles, Flame, Zap, X, Play, Leaf,
+  Lock,
+  Check,
+  Star,
+  BookOpen,
+  Trophy,
+  GraduationCap,
+  Sparkles,
+  Flame,
+  Zap,
+  X,
+  Play,
+  Leaf,
 } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { QuizModal } from "@/components/modals/quiz-modal";
 import { apiFetch, userQuery, isBrowser, type Module as ApiModule } from "@/lib/api";
 
 export type LearningLesson = {
-  id: number; title: string; status: "completed" | "current" | "available" | "locked";
-  kind: "lesson" | "challenge" | "exam" | "certificate" | "trophy"; xp: number;
+  id: number;
+  title: string;
+  status: "completed" | "current" | "available" | "locked";
+  kind: "lesson" | "challenge" | "exam" | "certificate" | "trophy";
+  xp: number;
 };
 type Lesson = LearningLesson;
-type Module = { id: number; title: string; description: string; color: string; progress: number; lessons: Lesson[] };
+type Module = {
+  id: number;
+  title: string;
+  description: string;
+  color: string;
+  progress: number;
+  lessons: Lesson[];
+};
 
 export const Route = createFileRoute("/aprender")({
   head: () => ({
@@ -36,7 +56,12 @@ const kindIcon = {
 } as const;
 
 const SIDES: Array<"center" | "right" | "right" | "center" | "left" | "left"> = [
-  "center", "right", "right", "center", "left", "left",
+  "center",
+  "right",
+  "right",
+  "center",
+  "left",
+  "left",
 ];
 
 function NodeButton({
@@ -61,8 +86,7 @@ function NodeButton({
       "bg-gradient-to-b from-success to-success/70 text-success-foreground shadow-[0_8px_0_oklch(0.45_0.15_150)]",
     current:
       "bg-gradient-to-b from-primary to-primary/70 text-primary-foreground shadow-[0_8px_0_oklch(0.30_0.10_150)] ring-4 ring-primary/25",
-    available:
-      "bg-gradient-to-b from-card to-muted text-foreground shadow-[0_8px_0_oklch(0.85_0.02_140)] border border-border",
+    available: "bg-card text-foreground shadow-[0_8px_0_oklch(0.85_0.02_140)] border border-border",
     locked:
       "bg-muted text-muted-foreground shadow-[0_6px_0_oklch(0.85_0.02_140)] cursor-not-allowed",
   } as const;
@@ -110,7 +134,7 @@ function ModuleHeader({ module: m, index }: { module: Module; index: number }) {
       whileInView={{ opacity: 1, x: 0 }}
       viewport={{ once: true }}
       transition={{ delay: index * 0.05 }}
-      className="sticky top-16 z-10 mb-8 mt-4 overflow-hidden rounded-2xl border border-border/60 bg-card/95 p-5 shadow-soft backdrop-blur-sm"
+      className="sticky top-16 z-10 mb-8 mt-4 overflow-hidden rounded-lg border border-border/60 bg-card/95 p-5 shadow-soft backdrop-blur-sm"
     >
       <div
         aria-hidden
@@ -119,14 +143,14 @@ function ModuleHeader({ module: m, index }: { module: Module; index: number }) {
       />
       <div className="relative flex items-center justify-between gap-3">
         <div>
-          <div className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+          <div className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
             Módulo {index + 1}
           </div>
-          <h3 className="mt-0.5 text-lg font-extrabold text-foreground">{m.title}</h3>
+          <h3 className="mt-0.5 text-lg font-bold text-foreground">{m.title}</h3>
           <p className="mt-1 text-xs text-muted-foreground">{m.description}</p>
         </div>
         <div
-          className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl text-2xl font-extrabold text-primary-foreground shadow-soft"
+          className="grid h-14 w-14 shrink-0 place-items-center rounded-lg text-2xl font-bold text-primary-foreground shadow-soft"
           style={{ background: m.color }}
         >
           {index + 1}
@@ -162,7 +186,9 @@ function LessonModal({
     <AnimatePresence>
       {lesson && (
         <motion.div
-          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
           className="fixed inset-0 z-50 grid place-items-center bg-foreground/40 p-4 backdrop-blur-sm"
           onClick={onClose}
         >
@@ -172,32 +198,48 @@ function LessonModal({
             exit={{ scale: 0.92, y: 12, opacity: 0 }}
             transition={{ type: "spring", stiffness: 280, damping: 24 }}
             onClick={(e) => e.stopPropagation()}
-            className="relative w-full max-w-md overflow-hidden rounded-3xl border border-border bg-card shadow-elevated"
+            className="relative w-full max-w-md overflow-hidden rounded-xl border border-border bg-card shadow-soft"
           >
-            <button onClick={onClose} className="absolute right-4 top-4 z-10 grid h-8 w-8 place-items-center rounded-full text-primary-foreground/80 hover:bg-white/15">
+            <button
+              onClick={onClose}
+              className="absolute right-3 top-3 z-10 grid h-11 w-11 place-items-center rounded-lg text-primary-foreground/80 hover:bg-white/15"
+              aria-label="Fechar detalhes da lição"
+            >
               <X className="h-4 w-4" />
             </button>
             <div className="relative overflow-hidden bg-gradient-hero p-8 text-center text-primary-foreground">
-              <div aria-hidden className="absolute -right-6 -top-6 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
-              <div aria-hidden className="absolute -bottom-10 -left-6 h-32 w-32 rounded-full bg-primary-glow/30 blur-2xl" />
-              <div className="relative mx-auto grid h-20 w-20 place-items-center rounded-3xl bg-white/15 backdrop-blur-sm">
+              <div
+                aria-hidden
+                className="absolute -right-6 -top-6 h-32 w-32 rounded-full bg-white/10 blur-2xl"
+              />
+              <div
+                aria-hidden
+                className="absolute -bottom-10 -left-6 h-32 w-32 rounded-full bg-primary-glow/30 blur-2xl"
+              />
+              <div className="relative mx-auto grid h-20 w-20 place-items-center rounded-xl bg-white/15 backdrop-blur-sm">
                 <BookOpen className="h-10 w-10" />
               </div>
-              <h3 className="relative mt-4 text-xl font-extrabold">{lesson.title}</h3>
-              <p className="relative mt-1 text-sm text-primary-foreground/80">Quiz interativo • +{lesson.xp} XP</p>
+              <h3 className="relative mt-4 text-xl font-bold">{lesson.title}</h3>
+              <p className="relative mt-1 text-sm text-primary-foreground/80">
+                Quiz interativo • +{lesson.xp} XP
+              </p>
             </div>
             <div className="space-y-3 p-6">
               <div className="flex items-center justify-between rounded-xl border border-border bg-muted/50 px-4 py-3">
-                <div className="flex items-center gap-2 text-sm font-semibold"><Sparkles className="h-4 w-4 text-warning" /> Recompensa</div>
+                <div className="flex items-center gap-2 text-sm font-semibold">
+                  <Sparkles className="h-4 w-4 text-warning" /> Recompensa
+                </div>
                 <div className="text-sm font-bold text-primary">+{lesson.xp} XP</div>
               </div>
               <div className="flex items-center justify-between rounded-xl border border-border bg-muted/50 px-4 py-3">
-                <div className="flex items-center gap-2 text-sm font-semibold"><Flame className="h-4 w-4 text-destructive" /> Sequência</div>
+                <div className="flex items-center gap-2 text-sm font-semibold">
+                  <Flame className="h-4 w-4 text-destructive" /> Sequência
+                </div>
                 <div className="text-sm font-bold">+1 dia</div>
               </div>
               <button
                 onClick={onStart}
-                className="mt-2 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-b from-primary to-primary/80 px-6 py-3.5 text-sm font-extrabold uppercase tracking-wider text-primary-foreground shadow-[0_5px_0_oklch(0.30_0.10_150)] transition-all active:translate-y-1 active:shadow-none"
+                className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-b from-primary to-primary/80 px-6 py-3.5 text-sm font-bold uppercase tracking-wider text-primary-foreground shadow-[0_5px_0_oklch(0.30_0.10_150)] transition-all active:translate-y-1 active:shadow-none"
               >
                 <Play className="h-4 w-4" /> Iniciar lição
               </button>
@@ -209,12 +251,22 @@ function LessonModal({
   );
 }
 
-function CelebrationModal({ open, onClose, xp }: { open: boolean; onClose: () => void; xp: number }) {
+function CelebrationModal({
+  open,
+  onClose,
+  xp,
+}: {
+  open: boolean;
+  onClose: () => void;
+  xp: number;
+}) {
   return (
     <AnimatePresence>
       {open && (
         <motion.div
-          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
           className="fixed inset-0 z-50 grid place-items-center bg-foreground/40 p-4 backdrop-blur-sm"
           onClick={onClose}
         >
@@ -223,7 +275,7 @@ function CelebrationModal({ open, onClose, xp }: { open: boolean; onClose: () =>
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.5, opacity: 0 }}
             transition={{ type: "spring", stiffness: 220, damping: 18 }}
-            className="relative w-full max-w-sm overflow-hidden rounded-3xl bg-card p-8 text-center shadow-elevated"
+            className="relative w-full max-w-sm overflow-hidden rounded-xl bg-card p-8 text-center shadow-soft"
             onClick={(e) => e.stopPropagation()}
           >
             <motion.div
@@ -233,12 +285,17 @@ function CelebrationModal({ open, onClose, xp }: { open: boolean; onClose: () =>
             >
               <Trophy className="h-12 w-12" />
             </motion.div>
-            <h3 className="mt-5 text-2xl font-extrabold text-foreground">Lição concluída!</h3>
-            <p className="mt-1 text-sm text-muted-foreground">Mandou bem. Continue cultivando seu conhecimento.</p>
-            <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-warning/15 px-4 py-2 text-sm font-extrabold text-warning">
+            <h3 className="mt-5 text-2xl font-bold text-foreground">Lição concluída!</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Mandou bem. Continue cultivando seu conhecimento.
+            </p>
+            <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-warning/15 px-4 py-2 text-sm font-bold text-warning">
               <Sparkles className="h-4 w-4" /> +{xp} XP conquistados
             </div>
-            <button onClick={onClose} className="mt-6 w-full rounded-2xl bg-primary px-6 py-3 text-sm font-bold uppercase tracking-wider text-primary-foreground shadow-soft hover:bg-primary/90">
+            <button
+              onClick={onClose}
+              className="mt-6 w-full rounded-lg bg-primary px-6 py-3 text-sm font-bold uppercase tracking-wider text-primary-foreground shadow-soft hover:bg-primary/90"
+            >
               Continuar
             </button>
           </motion.div>
@@ -250,7 +307,11 @@ function CelebrationModal({ open, onClose, xp }: { open: boolean; onClose: () =>
 
 function LearnPage() {
   const { data: user, isPending: loadingUser, error: userError } = useQuery(userQuery());
-  const { data: apiModules, isPending: loadingModules, error: modulesError } = useQuery({
+  const {
+    data: apiModules,
+    isPending: loadingModules,
+    error: modulesError,
+  } = useQuery({
     queryKey: ["modulos", user?.id],
     queryFn: async () => (await apiFetch<{ modulos: ApiModule[] }>("/modulos")).modulos,
     enabled: isBrowser && !!user,
@@ -261,19 +322,64 @@ function LearnPage() {
   const [quizLesson, setQuizLesson] = useState<Lesson | null>(null);
   const [celebrate, setCelebrate] = useState<number | null>(null);
   const [courseId, setCourseId] = useState<number | null>(null);
-  const courses = [...new Map((apiModules ?? []).map((module) => [module.curso_id, { id: module.curso_id, title: module.curso_titulo, description: module.curso_descricao, scope: module.escopo }])).values()];
+  const courses = [
+    ...new Map(
+      (apiModules ?? []).map((module) => [
+        module.curso_id,
+        {
+          id: module.curso_id,
+          title: module.curso_titulo,
+          description: module.curso_descricao,
+          scope: module.escopo,
+        },
+      ]),
+    ).values(),
+  ];
   const activeCourse = courses.find((course) => course.id === courseId) ?? courses[0];
 
-  const modules: Module[] = (apiModules ?? []).filter((module) => module.curso_id === activeCourse?.id).map((m) => ({
-    id: m.id, title: m.titulo, description: m.descricao, color: m.cor, progress: m.progresso,
-    lessons: m.licoes.map((l) => ({ id: l.id, title: l.titulo, status: l.status, kind: l.kind, xp: l.xp })),
-  }));
+  const modules: Module[] = (apiModules ?? [])
+    .filter((module) => module.curso_id === activeCourse?.id)
+    .map((m) => ({
+      id: m.id,
+      title: m.titulo,
+      description: m.descricao,
+      color: m.cor,
+      progress: m.progresso,
+      lessons: m.licoes.map((l) => ({
+        id: l.id,
+        title: l.titulo,
+        status: l.status,
+        kind: l.kind,
+        xp: l.xp,
+      })),
+    }));
   const totalXP = user?.xp ?? 0;
-  const pct = user?.xp_proximo_nivel ? Math.min(100, Math.round((totalXP / user.xp_proximo_nivel) * 100)) : 0;
+  const pct = user?.xp_proximo_nivel
+    ? Math.min(100, Math.round((totalXP / user.xp_proximo_nivel) * 100))
+    : 0;
 
-  if (loadingUser) return <PageShell><div role="status" className="p-16 text-center text-muted-foreground">Carregando sua trilha...</div></PageShell>;
-  if (userError || modulesError || !user) return <PageShell><div className="p-16 text-center text-destructive">{userError?.message ?? modulesError?.message ?? "Faça login para continuar"}</div></PageShell>;
-  if (loadingUser || loadingModules) return <PageShell><div className="p-16 text-center text-muted-foreground">Carregando sua trilha...</div></PageShell>;
+  if (loadingUser)
+    return (
+      <PageShell>
+        <div role="status" className="p-16 text-center text-muted-foreground">
+          Carregando sua trilha...
+        </div>
+      </PageShell>
+    );
+  if (userError || modulesError || !user)
+    return (
+      <PageShell>
+        <div className="p-16 text-center text-destructive">
+          {userError?.message ?? modulesError?.message ?? "Faça login para continuar"}
+        </div>
+      </PageShell>
+    );
+  if (loadingUser || loadingModules)
+    return (
+      <PageShell>
+        <div className="p-16 text-center text-muted-foreground">Carregando sua trilha...</div>
+      </PageShell>
+    );
 
   return (
     <PageShell>
@@ -287,38 +393,58 @@ function LearnPage() {
         <Leaf className="absolute bottom-32 left-20 h-12 w-12 rotate-[40deg] text-warning/20" />
       </div>
 
-      <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
-        {user.perfil_nome !== "aluno" && <Link to="/cursos" className="mb-6 flex items-center justify-between gap-3 rounded-2xl border border-primary/30 bg-primary/5 p-5 font-bold text-primary"><span>Gerenciar cursos, módulos e perguntas</span><BookOpen className="h-5 w-5 shrink-0" /></Link>}
+      <div className="app-page max-w-3xl">
+        {user.perfil_nome !== "aluno" && (
+          <Link
+            to="/cursos"
+            className="mb-6 flex items-center justify-between gap-3 rounded-lg border border-primary/30 bg-primary/5 p-5 font-bold text-primary"
+          >
+            <span>Gerenciar cursos, módulos e perguntas</span>
+            <BookOpen className="h-5 w-5 shrink-0" />
+          </Link>
+        )}
         {/* HUD */}
         <motion.div
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="sticky top-16 z-20 overflow-hidden rounded-3xl border border-border/60 bg-card/95 p-4 shadow-soft backdrop-blur-md"
+          className="sticky top-16 z-20 overflow-hidden rounded-xl border border-border/60 bg-card/95 p-4 shadow-soft backdrop-blur-md"
         >
-          <div aria-hidden className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-warning/5" />
+          <div
+            aria-hidden
+            className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-warning/5"
+          />
           <div className="relative grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 sm:flex sm:justify-between">
             <div className="flex min-w-0 items-center gap-3">
-              <div className="relative grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-gradient-hero text-primary-foreground font-extrabold shadow-soft">
+              <div className="relative grid h-12 w-12 shrink-0 place-items-center rounded-lg bg-gradient-hero text-primary-foreground font-bold shadow-soft">
                 {user.nivel}
                 <span className="absolute -right-1 -top-1 grid h-5 w-5 place-items-center rounded-full bg-warning text-[10px] text-warning-foreground shadow">
                   <Sparkles className="h-2.5 w-2.5" />
                 </span>
               </div>
               <div className="min-w-0">
-                <div className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Nível {user.nivel}</div>
+                <div className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                  Nível {user.nivel}
+                </div>
                 <div className="mt-1 flex items-center gap-2">
                   <div className="h-2 w-32 overflow-hidden rounded-full bg-muted sm:w-48">
-                    <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 1 }} className="h-full bg-gradient-to-r from-primary to-primary-glow" />
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${pct}%` }}
+                      transition={{ duration: 1 }}
+                      className="h-full bg-primary"
+                    />
                   </div>
-                  <span className="text-xs font-bold text-muted-foreground">{totalXP}/{user.xp_proximo_nivel} XP</span>
+                  <span className="text-xs font-bold text-muted-foreground">
+                    {totalXP}/{user.xp_proximo_nivel} XP
+                  </span>
                 </div>
               </div>
             </div>
             <div className="flex shrink-0 items-center gap-2">
-              <div className="flex items-center gap-1.5 rounded-full bg-destructive/10 px-3 py-1.5 text-sm font-extrabold text-destructive">
+              <div className="flex items-center gap-1.5 rounded-full bg-destructive/10 px-3 py-1.5 text-sm font-bold text-destructive">
                 <Flame className="h-4 w-4" /> {user.streak_dias}
               </div>
-              <div className="flex items-center gap-1.5 rounded-full bg-warning/15 px-3 py-1.5 text-sm font-extrabold text-warning">
+              <div className="flex items-center gap-1.5 rounded-full bg-warning/15 px-3 py-1.5 text-sm font-bold text-warning">
                 <Sparkles className="h-4 w-4" /> {user.pontos_totais}
               </div>
             </div>
@@ -327,12 +453,41 @@ function LearnPage() {
 
         {/* Trilha */}
         <div className="mt-6">
-          <h1 className="text-2xl font-extrabold">Seus cursos</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Conteúdo do Viridis, da sua escola e da sua turma.</p>
-          {courses.length === 0 ? <div className="mt-4 rounded-2xl border border-dashed border-border p-8 text-center text-muted-foreground">Nenhum curso publicado disponível para você no momento.</div> : <>
-            <div className="my-5 grid gap-3 sm:grid-cols-2">{courses.map((course) => <button key={course.id} aria-pressed={activeCourse?.id === course.id} onClick={() => { setCourseId(course.id); setSelected(null); setQuizLesson(null); }} className={`rounded-2xl border p-4 text-left transition-colors ${activeCourse?.id === course.id ? "border-primary bg-primary/10" : "border-border bg-card hover:bg-accent"}`}><p className="text-xs font-bold uppercase tracking-wide text-primary">{({ app: "Viridis", escola: "Sua escola", turma: "Sua turma" })[course.scope]}</p><h2 className="mt-1 break-words font-bold">{course.title}</h2><p className="mt-1 line-clamp-2 break-words text-xs text-muted-foreground">{course.description}</p></button>)}</div>
-            <h2 className="mb-4 break-words text-lg font-extrabold">{activeCourse?.title}</h2>
-          </>}
+          <h1 className="text-2xl font-bold">Seus cursos</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Conteúdo do Viridis, da sua escola e da sua turma.
+          </p>
+          {courses.length === 0 ? (
+            <div className="mt-4 rounded-lg border border-dashed border-border p-8 text-center text-muted-foreground">
+              Nenhum curso publicado disponível para você no momento.
+            </div>
+          ) : (
+            <>
+              <div className="my-5 grid gap-3 sm:grid-cols-2">
+                {courses.map((course) => (
+                  <button
+                    key={course.id}
+                    aria-pressed={activeCourse?.id === course.id}
+                    onClick={() => {
+                      setCourseId(course.id);
+                      setSelected(null);
+                      setQuizLesson(null);
+                    }}
+                    className={`rounded-lg border p-4 text-left transition-colors ${activeCourse?.id === course.id ? "border-primary bg-primary/10" : "border-border bg-card hover:bg-accent"}`}
+                  >
+                    <p className="text-xs font-bold uppercase tracking-wide text-primary">
+                      {{ app: "Viridis", escola: "Sua escola", turma: "Sua turma" }[course.scope]}
+                    </p>
+                    <h2 className="mt-1 break-words font-bold">{course.title}</h2>
+                    <p className="mt-1 line-clamp-2 break-words text-xs text-muted-foreground">
+                      {course.description}
+                    </p>
+                  </button>
+                ))}
+              </div>
+              <h2 className="mb-4 break-words text-lg font-bold">{activeCourse?.title}</h2>
+            </>
+          )}
           {modules.map((m, mi) => (
             <section key={m.id}>
               <ModuleHeader module={m} index={mi} />
@@ -386,7 +541,11 @@ function LearnPage() {
           setTimeout(() => setCelebrate(xp), 250);
         }}
       />
-      <CelebrationModal open={celebrate !== null} xp={celebrate ?? 0} onClose={() => setCelebrate(null)} />
+      <CelebrationModal
+        open={celebrate !== null}
+        xp={celebrate ?? 0}
+        onClose={() => setCelebrate(null)}
+      />
     </PageShell>
   );
 }

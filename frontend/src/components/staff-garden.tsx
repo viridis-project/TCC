@@ -48,7 +48,7 @@ type ClassHistory = {
   paginacao: { pagina: number; paginas: number; total: number };
 };
 
-const card = "rounded-2xl border border-border/60 bg-card p-5 shadow-soft";
+const card = "rounded-lg border border-border/60 bg-card p-5 shadow-soft";
 const button =
   "inline-flex items-center justify-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm font-semibold transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
 const statuses = {
@@ -96,12 +96,12 @@ export function StaffGarden({
       : "Acompanhe os envios e as atualizações de todas as turmas da sua escola.";
   return (
     <PageShell>
-      <div className="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
-        <section className="rounded-3xl bg-gradient-hero p-6 text-primary-foreground shadow-elevated sm:p-8">
-          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-white/70">
+      <div className="app-page space-y-6">
+        <section className="rounded-xl bg-gradient-hero p-6 text-primary-foreground shadow-soft sm:p-8">
+          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-white/70">
             <Sprout className="h-4 w-4" /> Acompanhamento das hortas
           </div>
-          <h1 className="mt-2 text-2xl font-extrabold sm:text-3xl">{title}</h1>
+          <h1 className="mt-2 text-2xl font-bold sm:text-3xl">{title}</h1>
           <p className="mt-2 max-w-2xl text-sm text-white/80">{description}</p>
           {!admin && user.instituicao_nome && (
             <p className="mt-4 flex items-center gap-2 text-sm font-semibold">
@@ -273,7 +273,7 @@ function Classes({
                 </span>
               </div>
               <div>
-                <h3 className="break-words text-xl font-extrabold">{item.nome}</h3>
+                <h3 className="break-words text-xl font-bold">{item.nome}</h3>
                 <p className="mt-1 break-words text-xs text-muted-foreground">{item.escola}</p>
               </div>
               <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
@@ -363,7 +363,7 @@ function ClassGarden({
             ].map(({ label, value, icon: Icon }) => (
               <div key={label} className={card}>
                 <Icon className="mb-2 h-5 w-5 text-primary" />
-                <p className="text-2xl font-extrabold">{Number(value).toLocaleString("pt-BR")}</p>
+                <p className="text-2xl font-bold">{Number(value).toLocaleString("pt-BR")}</p>
                 <p className="text-xs text-muted-foreground">{label}</p>
               </div>
             ))}
@@ -607,7 +607,7 @@ function SectionHeading({
   return (
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div className="min-w-0">
-        <h2 className="break-words text-xl font-extrabold">{title}</h2>
+        <h2 className="break-words text-xl font-bold">{title}</h2>
         <p className="mt-1 text-sm text-muted-foreground">{description}</p>
       </div>
       <button className={button} onClick={refresh} disabled={fetching}>
@@ -626,7 +626,7 @@ function Loading() {
 }
 function Empty({ children }: { children: ReactNode }) {
   return (
-    <div className="rounded-2xl border border-dashed border-border p-8 text-center">
+    <div className="rounded-lg border border-dashed border-border p-8 text-center">
       <Sprout className="mx-auto mb-3 h-8 w-8 text-primary" />
       <p className="text-sm text-muted-foreground">{children}</p>
     </div>
