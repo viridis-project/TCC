@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as RegistroRouteImport } from './routes/registro'
 import { Route as RecompensasRouteImport } from './routes/recompensas'
+import { Route as RankingRouteImport } from './routes/ranking'
 import { Route as PerfilRouteImport } from './routes/perfil'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as JardimRouteImport } from './routes/jardim'
@@ -32,6 +33,11 @@ const RegistroRoute = RegistroRouteImport.update({
 const RecompensasRoute = RecompensasRouteImport.update({
   id: '/recompensas',
   path: '/recompensas',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RankingRoute = RankingRouteImport.update({
+  id: '/ranking',
+  path: '/ranking',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PerfilRoute = PerfilRouteImport.update({
@@ -106,6 +112,7 @@ export interface FileRoutesByFullPath {
   '/jardim': typeof JardimRoute
   '/login': typeof LoginRoute
   '/perfil': typeof PerfilRoute
+  '/ranking': typeof RankingRoute
   '/recompensas': typeof RecompensasRoute
   '/registro': typeof RegistroRoute
   '/admin/quiz': typeof AdminQuizRoute
@@ -122,6 +129,7 @@ export interface FileRoutesByTo {
   '/jardim': typeof JardimRoute
   '/login': typeof LoginRoute
   '/perfil': typeof PerfilRoute
+  '/ranking': typeof RankingRoute
   '/recompensas': typeof RecompensasRoute
   '/registro': typeof RegistroRoute
   '/admin/quiz': typeof AdminQuizRoute
@@ -139,6 +147,7 @@ export interface FileRoutesById {
   '/jardim': typeof JardimRoute
   '/login': typeof LoginRoute
   '/perfil': typeof PerfilRoute
+  '/ranking': typeof RankingRoute
   '/recompensas': typeof RecompensasRoute
   '/registro': typeof RegistroRoute
   '/admin/quiz': typeof AdminQuizRoute
@@ -157,6 +166,7 @@ export interface FileRouteTypes {
     | '/jardim'
     | '/login'
     | '/perfil'
+    | '/ranking'
     | '/recompensas'
     | '/registro'
     | '/admin/quiz'
@@ -173,6 +183,7 @@ export interface FileRouteTypes {
     | '/jardim'
     | '/login'
     | '/perfil'
+    | '/ranking'
     | '/recompensas'
     | '/registro'
     | '/admin/quiz'
@@ -189,6 +200,7 @@ export interface FileRouteTypes {
     | '/jardim'
     | '/login'
     | '/perfil'
+    | '/ranking'
     | '/recompensas'
     | '/registro'
     | '/admin/quiz'
@@ -206,6 +218,7 @@ export interface RootRouteChildren {
   JardimRoute: typeof JardimRoute
   LoginRoute: typeof LoginRoute
   PerfilRoute: typeof PerfilRoute
+  RankingRoute: typeof RankingRoute
   RecompensasRoute: typeof RecompensasRoute
   RegistroRoute: typeof RegistroRoute
   ConviteProfessorTokenRoute: typeof ConviteProfessorTokenRoute
@@ -225,6 +238,13 @@ declare module '@tanstack/react-router' {
       path: '/recompensas'
       fullPath: '/recompensas'
       preLoaderRoute: typeof RecompensasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ranking': {
+      id: '/ranking'
+      path: '/ranking'
+      fullPath: '/ranking'
+      preLoaderRoute: typeof RankingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/perfil': {
@@ -335,6 +355,7 @@ const rootRouteChildren: RootRouteChildren = {
   JardimRoute: JardimRoute,
   LoginRoute: LoginRoute,
   PerfilRoute: PerfilRoute,
+  RankingRoute: RankingRoute,
   RecompensasRoute: RecompensasRoute,
   RegistroRoute: RegistroRoute,
   ConviteProfessorTokenRoute: ConviteProfessorTokenRoute,
