@@ -2,25 +2,12 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "motion/react";
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import {
-  AreaChart,
-  Area,
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
-import {
+  ArrowRight,
+  CalendarDays,
   TrendingUp,
   Sprout,
-  Droplets,
-  Leaf,
-  Sun,
   Lock,
   Check,
   Play,
@@ -33,7 +20,7 @@ import {
 import { PageShell } from "@/components/page-shell";
 import { SubmitActivityModal } from "@/components/modals/submit-activity-modal";
 import { StaffGarden } from "@/components/staff-garden";
-import { apiFetch, isBrowser, userQuery, type Module as ApiModule } from "@/lib/api";
+import { apiFetch, backendAsset, isBrowser, userQuery, type Module as ApiModule } from "@/lib/api";
 
 export const Route = createFileRoute("/jardim")({
   validateSearch: (search: Record<string, unknown>): { escola?: number; turma?: number } => {
@@ -47,7 +34,36 @@ export const Route = createFileRoute("/jardim")({
   component: GardenPage,
 });
 
-const PIE_COLORS = ["oklch(0.62 0.18 150)", "oklch(0.62 0.16 240)", "oklch(0.65 0.17 95)"];
+type PlantStatus = "pending" | "approved" | "rejected";
+
+type Planting = {
+  id: number;
+  titulo: string;
+  descricao: string;
+  url_foto: string;
+  status: PlantStatus;
+  data_envio: string | null;
+};
+
+type UserHistory = { plantios: Planting[] };
+
+const plantingStatuses: Record<PlantStatus, { label: string; className: string }> = {
+  pending: { label: "Em análise", className: "bg-warning/15 text-foreground" },
+  approved: { label: "Aprovado", className: "bg-success/15 text-success" },
+  rejected: { label: "Rejeitado", className: "bg-destructive/10 text-destructive" },
+};
+
+function plantingTimestamp(value: string | null) {
+  if (!value) return 0;
+  const timestamp = new Date(value.replace(" ", "T")).getTime();
+  return Number.isNaN(timestamp) ? 0 : timestamp;
+}
+
+function formatPlantingDate(value: string | null) {
+  const timestamp = plantingTimestamp(value);
+  if (!timestamp) return "Data não informada";
+  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short" }).format(timestamp);
+}
 
 function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
@@ -108,7 +124,7 @@ function StudentGardenPage() {
     enabled: isBrowser,
     retry: false,
     queryFn: async () => {
-      const [garden, moduleResult] = await Promise.all([
+      const [garden, moduleResult, history] = await Promise.all([
         apiFetch<{
           resumo: {
             plantas_ativas: number;
@@ -127,8 +143,9 @@ function StudentGardenPage() {
           }[];
         }>("/jardim/resumo"),
         apiFetch<{ modulos: ApiModule[] }>("/modulos"),
+        apiFetch<UserHistory>("/historico"),
       ]);
-      return { garden, modules: moduleResult.modulos };
+      return { garden, modules: moduleResult.modulos, history };
     },
   });
   type RankingRow = {
@@ -168,33 +185,6 @@ function StudentGardenPage() {
         </div>
       </PageShell>
     );
-  const summary = data.garden.resumo;
-  const summaryStats = [
-    {
-      icon: Sprout,
-      label: "Plantas Ativas",
-      value: summary.plantas_ativas,
-      color: "bg-success/15 text-success",
-    },
-    {
-      icon: Droplets,
-      label: "Litros Economizados",
-      value: summary.litros_economizados,
-      color: "bg-info/15 text-info",
-    },
-    {
-      icon: Leaf,
-      label: "Resíduos Reciclados (kg)",
-      value: summary.kg_residuos_reciclados,
-      color: "bg-success/15 text-success",
-    },
-    {
-      icon: Sun,
-      label: "kg CO₂ Reduzido",
-      value: summary.kg_co2_reduzido,
-      color: "bg-warning/15 text-warning",
-    },
-  ];
   const modules = data.modules.map((m) => ({ id: m.id, title: m.titulo, progress: m.progresso }));
   const ranking = rankingResult.ranking.map((r) => ({
     pos: r.posicao,
@@ -210,21 +200,9 @@ function StudentGardenPage() {
   const growthData = data.garden.crescimento.length
     ? data.garden.crescimento.map((r) => ({ month: r.mes.slice(5), value: Number(r.valor) }))
     : [{ month: "Agora", value: user.pontos_totais }];
-  const plantsData = Object.entries(summary.atividades_por_tipo).map(([name, value]) => ({
-    name:
-      (
-        { plant: "Plantio", water: "Rega", compost: "Composto", share: "Partilha" } as Record<
-          string,
-          string
-        >
-      )[name] ?? name,
-    value,
-  }));
-  const impactData = [
-    { name: "CO₂ Reduzido", value: summary.kg_co2_reduzido },
-    { name: "Água Economizada", value: summary.litros_economizados },
-    { name: "Resíduos Reciclados", value: summary.kg_residuos_reciclados },
-  ];
+  const recentPlantings = [...data.history.plantios]
+    .sort((a, b) => plantingTimestamp(b.data_envio) - plantingTimestamp(a.data_envio))
+    .slice(0, 3);
   const achievements = data.garden.conquistas.map((a) => ({
     id: a.id,
     title: a.titulo,
@@ -403,85 +381,89 @@ function StudentGardenPage() {
             </ul>
           </Card>
 
-          {/* Resumo */}
-          <Card>
-            <h2 className="text-sm font-bold uppercase tracking-wide text-foreground">
-              Resumo do Jardim
-            </h2>
-            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-              {summaryStats.map((s) => (
-                <motion.div
-                  key={s.label}
-                  whileHover={{ y: -1 }}
-                  className="rounded-xl border border-border/60 bg-background/60 p-3 text-center"
-                >
-                  <div
-                    className={`mx-auto grid h-10 w-10 place-items-center rounded-xl ${s.color}`}
-                  >
-                    <s.icon className="h-5 w-5" />
-                  </div>
-                  <div className="mt-2 text-xl font-bold text-foreground">{s.value}</div>
-                  <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                    {s.label}
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+          {/* Últimos plantios */}
+          <Card className="flex flex-col">
+            <div className="flex items-start justify-between gap-4">
               <div>
-                <div className="text-xs font-semibold text-muted-foreground">
-                  Crescimento das Plantas
-                </div>
-                <div className="mt-1 h-40">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={plantsData} margin={{ top: 4, right: 4, bottom: 0, left: -22 }}>
-                      <XAxis dataKey="name" fontSize={10} axisLine={false} tickLine={false} />
-                      <YAxis fontSize={10} axisLine={false} tickLine={false} />
-                      <Tooltip
-                        contentStyle={{ borderRadius: 12, border: "1px solid var(--color-border)" }}
-                      />
-                      <Bar dataKey="value" fill="var(--color-success)" radius={[6, 6, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
+                <h2 className="text-sm font-bold uppercase tracking-wide text-foreground">
+                  Últimos plantios
+                </h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Acompanhe suas atividades mais recentes.
+                </p>
               </div>
-              <div>
-                <div className="text-xs font-semibold text-muted-foreground">
-                  Impacto Sustentável
-                </div>
-                <div className="mt-1 flex items-center gap-3">
-                  <div className="h-32 w-32">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={impactData}
-                          dataKey="value"
-                          innerRadius={32}
-                          outerRadius={56}
-                          paddingAngle={3}
-                        >
-                          {impactData.map((_, i) => (
-                            <Cell key={i} fill={PIE_COLORS[i]} />
-                          ))}
-                        </Pie>
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
-                  <ul className="space-y-1.5 text-xs">
-                    {impactData.map((d, i) => (
-                      <li key={d.name} className="flex items-center gap-2">
-                        <span
-                          className="h-2.5 w-2.5 rounded-full"
-                          style={{ background: PIE_COLORS[i] }}
+              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-success/15 text-success">
+                <Sprout className="h-5 w-5" aria-hidden="true" />
+              </div>
+            </div>
+
+            {recentPlantings.length ? (
+              <ul className="mt-4 space-y-3">
+                {recentPlantings.map((planting, index) => {
+                  const status = plantingStatuses[planting.status];
+                  return (
+                    <motion.li
+                      key={planting.id}
+                      initial={{ opacity: 0, y: 8 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ delay: index * 0.04 }}
+                      className="flex min-w-0 gap-3 rounded-lg border border-border/60 bg-background/60 p-3"
+                    >
+                      {planting.url_foto ? (
+                        <img
+                          src={backendAsset(planting.url_foto)}
+                          alt={`Foto do plantio: ${planting.titulo}`}
+                          loading="lazy"
+                          className="h-20 w-20 shrink-0 rounded-xl object-cover sm:h-24 sm:w-24"
                         />
-                        <span className="text-muted-foreground">{d.name}</span>
-                        <span className="font-bold text-foreground">{d.value}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                      ) : (
+                        <div className="grid h-20 w-20 shrink-0 place-items-center rounded-xl bg-secondary text-primary sm:h-24 sm:w-24">
+                          <Sprout className="h-7 w-7" aria-hidden="true" />
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1 py-0.5">
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <h3 className="min-w-0 break-words text-sm font-bold text-foreground">
+                            {planting.titulo}
+                          </h3>
+                          <span
+                            className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold ${status.className}`}
+                          >
+                            {status.label}
+                          </span>
+                        </div>
+                        <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
+                          {planting.descricao || "Plantio enviado para avaliação."}
+                        </p>
+                        <div className="mt-2 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                          <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />
+                          {formatPlantingDate(planting.data_envio)}
+                        </div>
+                      </div>
+                    </motion.li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <div className="mt-4 flex flex-1 flex-col items-center justify-center rounded-lg border border-dashed border-border bg-background/40 px-5 py-8 text-center">
+                <Sprout className="h-8 w-8 text-primary" aria-hidden="true" />
+                <p className="mt-3 font-bold text-foreground">
+                  Seu jardim está pronto para crescer
+                </p>
+                <p className="mt-1 max-w-sm text-sm text-muted-foreground">
+                  Seus plantios mais recentes aparecerão aqui depois do primeiro envio.
+                </p>
               </div>
-            </div>
+            )}
+
+            <Link
+              to="/historico"
+              className="mt-4 inline-flex min-h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              Ver histórico completo
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </Link>
           </Card>
         </div>
 

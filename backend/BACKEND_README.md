@@ -19,6 +19,8 @@ No diretório `backend`:
 
 ```bash
 php -S localhost:8081 router.php
+
+C:\xampp\php\php.exe -S localhost:8081 router.php
 ```
 
 Se o PHP do XAMPP não estiver no `PATH`, use no PowerShell:
