@@ -88,7 +88,6 @@ function SchedulePage() {
       </PageShell>
     );
   const professor = role === "professor" || role === "admin";
-  const showClassmates = professor || role === "aluno";
   return (
     <PageShell>
       <div className="app-page">
@@ -111,14 +110,14 @@ function SchedulePage() {
                 </p>
               </div>
             </div>
-            {showClassmates && (
+            {professor && (
               <button
                 onClick={() => setModal(true)}
                 className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-bold text-primary"
                 aria-label="Nova tarefa"
               >
                 <Plus className="h-4 w-4" />
-                {professor ? "Nova tarefa" : null}
+                Nova tarefa
               </button>
             )}
           </div>
