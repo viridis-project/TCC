@@ -114,15 +114,14 @@ function HomePage() {
               </div>
             </div>
             <div
-              className="relative hidden min-h-80 overflow-hidden bg-accent lg:block"
+              className="relative hidden min-h-80 overflow-hidden bg-accent bg-cover bg-center lg:block"
+              style={{
+                backgroundImage:
+                  'url("https://www.zapimoveis.com.br/blog/wp-content/uploads/2025/09/horta-no-quintal-de-casa-1.jpg")',
+              }}
               aria-hidden="true"
-            >
-              <div className="absolute -bottom-20 -right-12 h-72 w-72 rounded-full bg-primary-glow" />
-              <div className="absolute left-10 top-10 h-44 w-28 rounded-t-full bg-primary" />
-              <div className="absolute bottom-10 left-1/2 grid h-28 w-28 -translate-x-1/2 place-items-center rounded-xl border border-white/40 bg-white/80 text-primary shadow-soft">
-                <Sprout className="h-12 w-12" />
-              </div>
-            </div>
+            />
+
           </div>
           <dl className="grid border-t bg-background/60 sm:grid-cols-3">
             {stats.map((stat) => (
