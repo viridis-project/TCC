@@ -24,14 +24,6 @@ export function AuthBrandPanel({
       <div className="relative z-10 flex items-center gap-3 border-t border-white/15 pt-6 text-xs text-white/60">
         <Leaf className="h-4 w-4" aria-hidden="true" /> Educação, cultivo e impacto no mesmo lugar.
       </div>
-      <div
-        className="absolute -bottom-28 -right-24 h-80 w-80 rounded-full bg-primary-glow/80"
-        aria-hidden="true"
-      />
-      <div
-        className="absolute right-20 top-24 h-48 w-32 rounded-t-full bg-white/10"
-        aria-hidden="true"
-      />
     </aside>
   );
 }
