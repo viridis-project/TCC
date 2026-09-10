@@ -117,7 +117,7 @@ function HomePage() {
               className="relative hidden min-h-80 overflow-hidden bg-accent bg-cover bg-center lg:block"
               style={{
                 backgroundImage:
-                  'url("https://www.zapimoveis.com.br/blog/wp-content/uploads/2025/09/horta-no-quintal-de-casa-1.jpg")',
+                  'url("https://conteudo.imguol.com.br/c/entretenimento/d5/2022/02/28/hortas-criadas-em-terrenos-osciosos-de-sp-colhem-6-t-de-alimentos-todo-mes-1646098868610_v2_4x3.jpg")',
               }}
               aria-hidden="true"
             />
