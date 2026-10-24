@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import {
   addDays,
   addMonths,
@@ -23,15 +23,20 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useSearch } from "@tanstack/react-router";
 
 export type ScheduleCalendarItem = {
   id: number;
+  task_id?: number | null;
+  grupo_id?: string | null;
   titulo: string;
   data_hora: string;
-  status: "agendado" | "concluido" | "cancelado";
+  status: "agendado" | "concluido" | "cancelado" | "nao_realizada";
   missao: string | null;
+  descricao?: string | null;
   turma?: string;
   aluno?: string;
+  resultados?: string | null;
 };
 
 type GroupedItem = ScheduleCalendarItem & { ids: number[]; alunos: string[]; date: Date };
@@ -48,6 +53,8 @@ function groupItems(items: ScheduleCalendarItem[]): GroupedItem[] {
       item.titulo,
       item.data_hora,
       item.status,
+      item.task_id ?? "",
+      item.grupo_id ?? item.id,
       item.turma ?? "",
       item.missao ?? "",
     ].join("|");
@@ -55,6 +62,7 @@ function groupItems(items: ScheduleCalendarItem[]): GroupedItem[] {
     if (current) {
       current.ids.push(item.id);
       if (item.aluno && !current.alunos.includes(item.aluno)) current.alunos.push(item.aluno);
+      if (item.resultados) current.resultados = [current.resultados, item.resultados].filter(Boolean).join("\n\n");
       return;
     }
     groups.set(key, {
@@ -71,6 +79,7 @@ const statusClass = {
   agendado: "border-primary/30 bg-primary/10 text-foreground",
   concluido: "border-success/30 bg-success/10 text-foreground",
   cancelado: "border-destructive/30 bg-destructive/5 text-muted-foreground",
+  nao_realizada: "border-amber-500/40 bg-amber-500/10 text-amber-900 dark:text-amber-200",
 } as const;
 
 export function ScheduleCalendar({
@@ -86,7 +95,14 @@ export function ScheduleCalendar({
 }) {
   const [view, setView] = useState<ViewMode>("week");
   const [anchor, setAnchor] = useState(() => new Date());
+  const search = useSearch({ strict: false }) as { data?: string };
+  useEffect(() => {
+    if (!search.data) return;
+    const parsed = new Date(`${search.data}T00:00:00`);
+    if (!Number.isNaN(parsed.getTime())) setAnchor(parsed);
+  }, [search.data]);
   const grouped = useMemo(() => groupItems(items), [items]);
+  const [resultItem, setResultItem] = useState<GroupedItem | null>(null);
   const weekStart = startOfWeek(anchor, { weekStartsOn: 1 });
   const weekEnd = endOfWeek(anchor, { weekStartsOn: 1 });
   const periodLabel =
@@ -95,9 +111,15 @@ export function ScheduleCalendar({
       : format(anchor, "MMMM 'de' yyyy", { locale: ptBR });
 
   function movePeriod(direction: -1 | 1) {
-    setAnchor((current) =>
-      view === "week" ? addWeeks(current, direction) : addMonths(current, direction),
-    );
+    setAnchor((current) => {
+      const next = view === "week" ? addWeeks(current, direction) : addMonths(current, direction);
+      if (typeof window !== "undefined") {
+        const params = new URLSearchParams(window.location.search);
+        params.set("data", format(next, "yyyy-MM-dd"));
+        window.history.replaceState(null, "", `${window.location.pathname}?${params.toString()}`);
+      }
+      return next;
+    });
   }
 
   return (
@@ -114,7 +136,16 @@ export function ScheduleCalendar({
           </button>
           <button
             type="button"
-            onClick={() => setAnchor(new Date())}
+            onClick={() => {
+              const today = new Date();
+              setAnchor(today);
+              if (typeof window !== "undefined") {
+                const params = new URLSearchParams(window.location.search);
+                params.delete("data");
+                const query = params.toString();
+                window.history.replaceState(null, "", `${window.location.pathname}${query ? `?${query}` : ""}`);
+              }
+            }}
             className="min-h-11 rounded-lg px-3 text-sm font-bold text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             Hoje
@@ -150,10 +181,12 @@ export function ScheduleCalendar({
           professor={professor}
           updating={updating}
           onStatus={onStatus}
+          onResults={setResultItem}
         />
       ) : (
-        <MonthView anchor={anchor} items={grouped} />
+        <MonthView anchor={anchor} items={grouped} onResults={setResultItem} />
       )}
+      {resultItem && <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4 backdrop-blur-sm" onClick={() => setResultItem(null)}><section role="dialog" aria-modal="true" className="w-full max-w-lg rounded-2xl bg-card p-6 shadow-xl" onClick={(event) => event.stopPropagation()}><div className="flex items-start justify-between gap-3"><div><h2 className="text-lg font-bold">{resultItem.titulo}</h2><p className="mt-1 text-sm text-muted-foreground">{format(resultItem.date,"dd/MM/yyyy 'às' HH:mm",{locale:ptBR})} · {resultItem.status === "nao_realizada" ? "Não realizada" : "Concluída"}</p></div><button className="rounded-md border px-3 py-2 text-sm" onClick={() => setResultItem(null)}>Fechar</button></div><div className="mt-4 space-y-4"><div><h3 className="text-xs font-bold uppercase text-muted-foreground">Participantes</h3><p className="mt-1 text-sm">{resultItem.alunos.join(", ") || "Nenhum aluno registrado"}</p></div>{resultItem.descricao && <div><h3 className="text-xs font-bold uppercase text-muted-foreground">Descrição</h3><p className="mt-1 whitespace-pre-wrap text-sm">{resultItem.descricao}</p></div>}{resultItem.missao && <p className="text-sm"><strong>Atividade:</strong> {resultItem.missao}</p>}{resultItem.resultados && <div><h3 className="text-xs font-bold uppercase text-muted-foreground">Resultados enviados</h3><pre className="mt-1 whitespace-pre-wrap rounded-lg bg-muted p-4 text-sm">{resultItem.resultados}</pre></div>}</div></section></div>}
     </section>
   );
 }
@@ -188,12 +221,14 @@ function WeekView({
   professor,
   updating,
   onStatus,
+  onResults,
 }: {
   anchor: Date;
   items: GroupedItem[];
   professor: boolean;
   updating: boolean;
   onStatus: (ids: number[], value: "concluido" | "cancelado") => void;
+  onResults: (item: GroupedItem) => void;
 }) {
   const weekStart = startOfWeek(anchor, { weekStartsOn: 1 });
   const days = Array.from({ length: 7 }, (_, index) => addDays(weekStart, index));
@@ -255,6 +290,7 @@ function WeekView({
                         professor={professor}
                         updating={updating}
                         onStatus={onStatus}
+                        onResults={onResults}
                       />
                       {entries.length > 1 && (
                         <div className="mt-1 truncate text-center text-[10px] font-bold text-primary">
@@ -282,32 +318,40 @@ function WeekEvent({
   professor,
   updating,
   onStatus,
+  onResults,
 }: {
   item: GroupedItem;
   professor: boolean;
   updating: boolean;
   onStatus: (ids: number[], value: "concluido" | "cancelado") => void;
+  onResults: (item: GroupedItem) => void;
 }) {
   return (
     <article
       className={cn(
         "flex h-[calc(100%-1.25rem)] min-h-0 flex-col overflow-hidden rounded-lg border p-2 text-xs",
+        (item.status === "concluido" || item.status === "nao_realizada") && "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         statusClass[item.status],
       )}
       title={`${item.titulo} — ${format(item.date, "HH:mm")}`}
+      onClick={() => (item.status === "concluido" || item.status === "nao_realizada") && onResults(item)}
+      role={item.status === "concluido" || item.status === "nao_realizada" ? "button" : undefined}
+      tabIndex={item.status === "concluido" || item.status === "nao_realizada" ? 0 : undefined}
+      onKeyDown={(event) => {
+        if ((item.status === "concluido" || item.status === "nao_realizada") && (event.key === "Enter" || event.key === " ")) {
+          event.preventDefault();
+          onResults(item);
+        }
+      }}
     >
       <div className="truncate font-bold">{item.titulo}</div>
       <div className="mt-0.5 tabular-nums text-muted-foreground">{format(item.date, "HH:mm")}</div>
-      {professor && (
-        <div className="mt-1 truncate text-[10px] text-muted-foreground">
-          {item.turma}
-          {item.alunos.length
-            ? ` · ${item.alunos.length} aluno${item.alunos.length > 1 ? "s" : ""}`
-            : ""}
-        </div>
-      )}
+      <div className="mt-1 truncate text-[10px] text-muted-foreground">
+        {professor && item.turma ? `${item.turma} · ` : ""}
+        {item.alunos.length ? `Com ${item.alunos.join(", ")}` : "Sem alunos"}
+      </div>
       <div className="mt-auto flex items-end justify-between gap-1">
-        <span className="truncate text-[10px] capitalize text-muted-foreground">{item.status}</span>
+        <span className="truncate text-[10px] text-muted-foreground">{item.status === "nao_realizada" ? "Não realizada" : item.status === "concluido" ? "Concluída" : item.status === "cancelado" ? "Cancelada" : "Agendada"}</span>
         {professor && item.status === "agendado" && (
           <span className="flex shrink-0 gap-1">
             <button
@@ -335,7 +379,7 @@ function WeekEvent({
   );
 }
 
-function MonthView({ anchor, items }: { anchor: Date; items: GroupedItem[] }) {
+function MonthView({ anchor, items, onResults }: { anchor: Date; items: GroupedItem[]; onResults: (item: GroupedItem) => void }) {
   const monthStart = startOfMonth(anchor);
   const monthEnd = endOfMonth(anchor);
   const calendarStart = startOfWeek(monthStart, { weekStartsOn: 1 });
@@ -385,8 +429,11 @@ function MonthView({ anchor, items }: { anchor: Date; items: GroupedItem[] }) {
                 </div>
                 <div className="space-y-1">
                   {entries.slice(0, 2).map((item) => (
-                    <div
+                    <button
                       key={item.ids.join("-")}
+                      type="button"
+                      onClick={() => (item.status === "concluido" || item.status === "nao_realizada") && onResults(item)}
+                      disabled={item.status !== "concluido" && item.status !== "nao_realizada"}
                       className={cn(
                         "flex min-w-0 items-center gap-1 rounded-md border px-1.5 py-1 text-[10px]",
                         statusClass[item.status],
@@ -397,7 +444,7 @@ function MonthView({ anchor, items }: { anchor: Date; items: GroupedItem[] }) {
                         {format(item.date, "HH:mm")}
                       </span>
                       <span className="truncate">{item.titulo}</span>
-                    </div>
+                    </button>
                   ))}
                   {entries.length > 2 && (
                     <div className="truncate px-1 text-[10px] font-bold text-primary">

@@ -75,4 +75,14 @@ header('Access-Control-Allow-Headers: Content-Type, X-Requested-With');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Vary: Origin');
 
+$requestOrigin = $_SERVER['HTTP_ORIGIN'] ?? null;
+$expectedOrigin = rtrim((string) $config['frontend_origin'], '/');
+if ($requestOrigin !== null
+    && !hash_equals($expectedOrigin, rtrim($requestOrigin, '/'))
+    && !in_array($_SERVER['REQUEST_METHOD'] ?? 'GET', ['GET', 'HEAD', 'OPTIONS'], true)) {
+    http_response_code(403);
+    echo json_encode(['erro' => 'Origem da requisição não autorizada'], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
 return $config;

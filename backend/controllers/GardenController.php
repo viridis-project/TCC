@@ -67,7 +67,7 @@ final class GardenController extends Controller
         $tab = $_GET['aba'] ?? 'envios';
         $status = $_GET['status'] ?? 'all';
         $type = $_GET['tipo'] ?? 'all';
-        if (!in_array($tab,['envios','alteracoes'],true)
+        if (!in_array($tab,['envios','alteracoes','tarefas'],true)
             || !in_array($status,['all','pending','approved','rejected'],true)
             || !in_array($type,['all','plant','water','compost','share','outro'],true)) {
             $this->json(['erro'=>'Filtro inválido'],422);
@@ -81,6 +81,15 @@ final class GardenController extends Controller
              FROM submissao_missao s JOIN usuario u ON u.id=s.aluno_id WHERE u.turma_id=?"
         );
         $summary->execute([$classId]);
+        $tasksStmt=$this->db->prepare("SELECT ta.id,ta.titulo,ta.descricao,ta.ativa,ta.criado_em,ta.pontos,ta.max_alunos,ta.modo_participacao,m.titulo missao,u.nome criador,
+                CASE WHEN EXISTS(SELECT 1 FROM agenda a WHERE a.task_id=ta.id AND a.status='concluido') OR EXISTS(SELECT 1 FROM submissao_missao sm WHERE sm.missao_id=ta.missao_id) THEN 'concluida'
+                     WHEN EXISTS(SELECT 1 FROM agenda a WHERE a.task_id=ta.id AND a.status='agendado' AND a.data_hora>=CURDATE()) THEN 'agendada' ELSE 'disponivel' END status,
+                (SELECT COUNT(DISTINCT a.aluno_id) FROM agenda a WHERE a.task_id=ta.id AND a.status='agendado' AND a.data_hora>=CURDATE()) participantes
+            FROM tarefa_aberta ta LEFT JOIN missao m ON m.id=ta.missao_id JOIN usuario u ON u.id=ta.criador_id
+            JOIN turma_escolar tc ON tc.id=ta.turma_id WHERE ta.turma_id=? AND (tc.instituicao_id=? OR ?='admin') ORDER BY ta.criado_em DESC");
+        $tasksStmt->execute([$classId,(int)($user['instituicao_id']??0),$user['perfil_nome']]); $tasks=$tasksStmt->fetchAll();
+        $participants=$this->db->prepare("SELECT a.id,a.titulo,a.data_hora,a.status,u.nome aluno FROM agenda a JOIN usuario u ON u.id=a.aluno_id WHERE a.task_id=? ORDER BY a.data_hora,u.nome");
+        foreach($tasks as &$task){$participants->execute([(int)$task['id']]);$task['inscritos']=$participants->fetchAll();}
 
         $where = 'u.turma_id=?';
         $bindings = [$classId];
@@ -107,7 +116,7 @@ final class GardenController extends Controller
         $rows->bindValue(count($bindings) + 2,($page - 1) * 12,PDO::PARAM_INT);
         $rows->execute();
         $this->json([
-            'turma'=>$class,'resumo'=>$summary->fetch(),'registros'=>$rows->fetchAll(),
+            'turma'=>$class,'resumo'=>$summary->fetch(),'registros'=>$rows->fetchAll(),'tarefas_abertas'=>$tasks,
             'paginacao'=>['pagina'=>$page,'paginas'=>$pages,'total'=>$total],
         ]);
     }

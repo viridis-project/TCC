@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { motion } from "motion/react";
 import { User, Plus } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
@@ -25,13 +26,13 @@ function SchedulePage() {
   const { user, role, isLoading: loadingUser, error: userError } = useAuth();
   const queryClient = useQueryClient();
   const [modal, setModal] = useState(false);
-  const endpoint = role === "professor" || role === "admin" ? "/agenda/professor" : "/agenda/aluno";
+  const endpoint = role === "admin" ? "/agenda/professor" : role === "professor" ? "/agenda/professor" : role === "diretor" ? "/agenda/diretor" : "/agenda/aluno";
   const { data, isLoading, error } = useQuery({
     queryKey: ["agenda", role],
-    enabled: isBrowser && !!role && role !== "diretor",
+    enabled: isBrowser && !!role,
     retry: false,
     queryFn: async () => {
-      const agenda = await apiFetch<{ agenda: Agenda[]; turmas?: Classroom[] }>(endpoint);
+      const agenda = await apiFetch<{ agenda: Agenda[]; turmas?: Classroom[]; tarefas_abertas?: unknown[] }>(endpoint);
       let missions: Mission[] = [];
       if (role === "professor" || role === "admin")
         missions = (await apiFetch<{ missoes: Mission[] }>("/missoes")).missoes;
@@ -65,14 +66,6 @@ function SchedulePage() {
         <div className="p-16 text-center text-muted-foreground">Carregando agenda...</div>
       </PageShell>
     );
-  if (role === "diretor")
-    return (
-      <PageShell>
-        <div className="p-16 text-center text-muted-foreground">
-          A gestão da direção está disponível no painel Diretor.
-        </div>
-      </PageShell>
-    );
   if (isLoading)
     return (
       <PageShell>
@@ -87,7 +80,7 @@ function SchedulePage() {
         </div>
       </PageShell>
     );
-  const professor = role === "professor" || role === "admin";
+  const professor = role === "professor" || role === "admin" || role === "diretor";
   return (
     <PageShell>
       <div className="app-page">

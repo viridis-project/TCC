@@ -21,6 +21,9 @@ import { PageShell } from "@/components/page-shell";
 import { SubmitActivityModal } from "@/components/modals/submit-activity-modal";
 import { StaffGarden } from "@/components/staff-garden";
 import { apiFetch, backendAsset, isBrowser, userQuery, type Module as ApiModule } from "@/lib/api";
+import { DatePicker, TimePicker } from "@/components/ui/date-time-picker";
+import { toast } from "sonner";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/jardim")({
   validateSearch: (search: Record<string, unknown>): { escola?: number; turma?: number } => {
@@ -46,6 +49,7 @@ type Planting = {
 };
 
 type UserHistory = { plantios: Planting[] };
+type OpenTask = { id: number; titulo: string; descricao: string; missao: string | null; professor: string; participantes: number; pontos: number; max_alunos: number; modo_participacao: "escolher" | "aberto" | "particular"; horario: string | null; grupo_id: string | null; convite_id: number | null; participando: number; status: "disponivel" | "agendada" | "concluida" };
 
 const plantingStatuses: Record<PlantStatus, { label: string; className: string }> = {
   pending: { label: "Em análise", className: "bg-warning/15 text-foreground" },
@@ -116,6 +120,11 @@ function GardenPage() {
 
 function StudentGardenPage() {
   const [activityType, setActivityType] = useState<string | null>(null);
+  const [selectedTask, setSelectedTask] = useState<OpenTask | null>(null);
+  const [participationMode, setParticipationMode] = useState<"aberto" | "particular">("aberto");
+  const [inviteStudent, setInviteStudent] = useState("");
+  const [taskDate, setTaskDate] = useState("");
+  const [taskTime, setTaskTime] = useState("");
   const [rankingType, setRankingType] = useState<"individual" | "turma" | "escola">("individual");
   const queryClient = useQueryClient();
   const { data: user, isLoading: loadingUser, error: userError } = useQuery(userQuery());
@@ -124,7 +133,7 @@ function StudentGardenPage() {
     enabled: isBrowser,
     retry: false,
     queryFn: async () => {
-      const [garden, moduleResult, history] = await Promise.all([
+      const [garden, moduleResult, history, taskResult] = await Promise.all([
         apiFetch<{
           resumo: {
             plantas_ativas: number;
@@ -144,9 +153,15 @@ function StudentGardenPage() {
         }>("/jardim/resumo"),
         apiFetch<{ modulos: ApiModule[] }>("/modulos"),
         apiFetch<UserHistory>("/historico"),
+        apiFetch<{ tarefas_abertas: OpenTask[] }>("/agenda/aluno"),
       ]);
-      return { garden, modules: moduleResult.modulos, history };
+      return { garden, modules: moduleResult.modulos, history, tasks: taskResult.tarefas_abertas };
     },
+  });
+  const { data: classmates = [] } = useQuery({
+    queryKey: ["task-classmates", selectedTask?.id, selectedTask?.grupo_id],
+    enabled: isBrowser && !!selectedTask && selectedTask.max_alunos > 1 && selectedTask.modo_participacao === "particular" && !!selectedTask.grupo_id,
+    queryFn: async () => (await apiFetch<{ alunos: { id: number; nome: string }[] }>(`/tarefas-abertas/${selectedTask!.id}/alunos?grupo_id=${selectedTask!.grupo_id}`)).alunos,
   });
   type RankingRow = {
     posicao: number;
@@ -185,6 +200,33 @@ function StudentGardenPage() {
         </div>
       </PageShell>
     );
+  const acceptTask = async (taskId: number) => {
+    if (!taskDate || !taskTime) return toast.error("Escolha a data e o horário do seu turno");
+    try {
+      const result = await apiFetch<{ mensagem: string; grupo_id: string }>(`/tarefas-abertas/${taskId}/aceitar`, {
+        method: "POST",
+        body: JSON.stringify({ data_hora: `${taskDate} ${taskTime}:00`, modo_participacao: participationMode }),
+      });
+      toast.success(result.mensagem);
+      setTaskDate("");
+      setTaskTime("");
+      setSelectedTask(null);
+      await queryClient.invalidateQueries({ queryKey: ["jardim"] });
+      await queryClient.invalidateQueries({ queryKey: ["agenda"] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível aceitar a tarefa");
+    }
+  };
+  const taskAction = async (path: string, body: unknown, successMessage?: string) => {
+    if (!selectedTask) return;
+    try {
+      const result = await apiFetch<{ mensagem: string }>(path, { method: "POST", body: JSON.stringify(body) });
+      toast.success(successMessage ?? result.mensagem);
+      setSelectedTask(null);
+      await queryClient.invalidateQueries({ queryKey: ["jardim"] });
+      await queryClient.invalidateQueries({ queryKey: ["agenda"] });
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Não foi possível atualizar a task"); }
+  };
   const modules = data.modules.map((m) => ({ id: m.id, title: m.titulo, progress: m.progresso }));
   const ranking = rankingResult.ranking.map((r) => ({
     pos: r.posicao,
@@ -474,7 +516,13 @@ function StudentGardenPage() {
               Atividades Pontuáveis
             </h2>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <motion.button
+              {data.tasks.map((task) => (
+                <button key={task.id} onClick={() => { setSelectedTask(task); setTaskDate(""); setTaskTime(""); setInviteStudent(""); setParticipationMode("aberto"); }} className="rounded-lg border border-border/60 bg-background/60 p-4 text-left transition hover:border-primary/40 hover:bg-primary/5 sm:col-span-2">
+                  <div className="flex items-center justify-between gap-3"><span className="font-bold">{task.titulo}</span><span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${task.status === "disponivel" ? "bg-success/15 text-success" : task.status === "agendada" ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}>{task.status === "disponivel" ? "Disponível" : task.status === "agendada" ? "Agendada" : "Concluída"}</span></div>
+                  <p className="mt-2 text-xs font-semibold text-muted-foreground">+{task.pontos} pts</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{task.participantes}/{task.max_alunos} alunos · {task.horario ? `Turno ${task.horario}` : "Escolha um turno"}</p>
+                </button>
+              ))}              <motion.button
                 onClick={() => setActivityType("plant")}
                 whileHover={{ y: -1 }}
                 className="flex items-start gap-3 rounded-lg border border-success/30 bg-success/10 p-4 text-left transition-colors hover:bg-success/15"
@@ -638,6 +686,30 @@ function StudentGardenPage() {
           void queryClient.invalidateQueries({ queryKey: ["perfil"] });
         }}
       />
+      <Dialog open={!!selectedTask} onOpenChange={(open) => !open && setSelectedTask(null)}>
+        <DialogContent className="max-w-lg overflow-hidden rounded-xl border-border/60 p-0">
+          {selectedTask && <>
+            <div className="bg-gradient-hero p-6 text-primary-foreground">
+              <DialogHeader><DialogTitle>{selectedTask.titulo}</DialogTitle><DialogDescription className="text-white/80">Tarefa publicada por {selectedTask.professor}</DialogDescription></DialogHeader>
+            </div>
+            <div className="space-y-4 p-6">
+              <p className="whitespace-pre-wrap text-sm text-muted-foreground">{selectedTask.descricao || "Sem instruções adicionais."}</p>
+              <div className="grid grid-cols-3 gap-2 text-center text-sm">
+                <div className="rounded-lg bg-muted p-3"><strong>{selectedTask.pontos}</strong><div className="text-xs text-muted-foreground">pontos</div></div>
+                <div className="rounded-lg bg-muted p-3"><strong>{selectedTask.participantes}/{selectedTask.max_alunos}</strong><div className="text-xs text-muted-foreground">participantes</div></div>
+                <div className="rounded-lg bg-muted p-3"><strong>{selectedTask.missao ?? "Task"}</strong><div className="text-xs text-muted-foreground">atividade</div></div>
+              </div>
+              {selectedTask.horario ? <p className="rounded-lg border p-3 text-sm">Turno escolhido: <strong>{new Date(selectedTask.horario.replace(" ", "T")).toLocaleString("pt-BR")}</strong> · {selectedTask.modo_participacao === "aberto" ? "participação aberta" : "participação particular"}</p> : <>
+                <div className="grid gap-3 sm:grid-cols-2"><label className="text-xs">Data<DatePicker value={taskDate} onChange={setTaskDate} /></label><label className="text-xs">Horário<TimePicker value={taskTime} onChange={setTaskTime} /></label></div>
+                <fieldset className="space-y-2"><legend className="text-xs font-bold">Quem pode participar?</legend><label className="flex gap-2 text-sm"><input type="radio" checked={participationMode === "aberto"} onChange={() => setParticipationMode("aberto")} />Qualquer colega da turma</label><label className="flex gap-2 text-sm"><input type="radio" checked={participationMode === "particular"} onChange={() => setParticipationMode("particular")} />Somente colegas que eu convidar</label></fieldset>
+              </>}
+              <DialogFooter className="flex-wrap">
+                {!selectedTask.horario ? <button onClick={() => void acceptTask(selectedTask.id)} className="min-h-10 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-foreground">Reservar meu turno</button> : selectedTask.max_alunos > 1 && selectedTask.convite_id ? <button onClick={() => void taskAction(`/convites-tarefa/${selectedTask.convite_id}/responder`, { aceitar: true })} className="min-h-10 rounded-lg bg-primary px-4 text-sm font-bold text-primary-foreground">Aceitar convite</button> : selectedTask.max_alunos > 1 && selectedTask.participando && selectedTask.modo_participacao === "particular" ? <div className="flex w-full gap-2"><select value={inviteStudent} onChange={(e) => setInviteStudent(e.target.value)} className="min-h-10 flex-1 rounded-lg border bg-background px-3"><option value="">Convidar aluno...</option>{classmates.map((a) => <option key={a.id} value={a.id}>{a.nome}</option>)}</select><button disabled={!inviteStudent} onClick={() => void taskAction(`/tarefas-abertas/${selectedTask.id}/convidar`, { grupo_id: selectedTask.grupo_id, aluno_id: Number(inviteStudent) })} className="min-h-10 rounded-lg bg-primary px-4 text-sm font-bold text-primary-foreground disabled:opacity-50">Convidar</button></div> : selectedTask.max_alunos > 1 && selectedTask.modo_participacao === "aberto" && !selectedTask.participando ? <button onClick={() => void taskAction(`/tarefas-abertas/${selectedTask.id}/entrar`, { grupo_id: selectedTask.grupo_id })} className="min-h-10 rounded-lg bg-primary px-4 text-sm font-bold text-primary-foreground">Participar deste turno</button> : <button onClick={() => setSelectedTask(null)} className="min-h-10 rounded-lg border px-4 text-sm">Fechar</button>}
+              </DialogFooter>
+            </div>
+          </>}
+        </DialogContent>
+      </Dialog>
     </PageShell>
   );
 }

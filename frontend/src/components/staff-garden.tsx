@@ -14,6 +14,7 @@ import {
 import { PageShell } from "@/components/page-shell";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { apiFetch, backendAsset, type User } from "@/lib/api";
+import { toast } from "sonner";
 
 type Selection = { escola?: number; turma?: number };
 type School = { id: number; nome: string; total_turmas: number };
@@ -46,7 +47,9 @@ type ClassHistory = {
   resumo: { total_envios: number; pendentes: number; aprovados: number; rejeitados: number };
   registros: Activity[];
   paginacao: { pagina: number; paginas: number; total: number };
+  tarefas_abertas: OpenTask[];
 };
+type OpenTask = { id: number; titulo: string; descricao: string; ativa: number; criado_em: string; missao: string | null; criador: string; pontos: number; max_alunos: number; modo_participacao: string; participantes: number; status: "disponivel" | "agendada" | "concluida"; inscritos: { id: number; titulo: string; data_hora: string; status: string; aluno: string }[] };
 
 const card = "rounded-lg border border-border/60 bg-card p-5 shadow-soft";
 const button =
@@ -337,6 +340,12 @@ function ClassGarden({
           ? Number(query.data?.turma.instituicao_id) || undefined
           : undefined,
     });
+  const toggleTask = async (task: OpenTask) => {
+    try {
+      const result = await apiFetch<{ mensagem: string }>(`/tarefas-abertas/${task.id}`, { method: "PUT", body: JSON.stringify({ ativa: task.ativa ? 0 : 1 }) });
+      toast.success(result.mensagem); await query.refetch();
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Falha ao atualizar tarefa"); }
+  };
   const back = (
     <button className={button} onClick={goBack}>
       <ArrowLeft className="h-4 w-4" />
@@ -378,15 +387,17 @@ function ClassGarden({
         }}
         className="space-y-4"
       >
-        <TabsList className="grid h-auto w-full grid-cols-2 sm:w-96">
+        <TabsList className="grid h-auto w-full grid-cols-3 sm:w-[34rem]">
           <TabsTrigger value="envios" className="py-3">
             Envios dos alunos
           </TabsTrigger>
           <TabsTrigger value="alteracoes" className="py-3">
             Atualizações
           </TabsTrigger>
+          <TabsTrigger value="tarefas" className="py-3">Tarefas abertas</TabsTrigger>
         </TabsList>
         <div className="flex flex-wrap gap-3">
+          {tab !== "tarefas" && <>
           <Filter
             label="Status"
             value={status}
@@ -408,8 +419,22 @@ function ClassGarden({
             }}
             options={Object.entries(types).map(([value, label]) => ({ value, label }))}
           />
+          </>}
         </div>
-        {["envios", "alteracoes"].map((value) => (
+        {tab === "tarefas" && query.data && (
+          <div className="space-y-3">
+            {query.data.tarefas_abertas.length ? query.data.tarefas_abertas.map((task) => (
+              <article key={task.id} className={`${card} space-y-4`}>
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h3 className="text-base font-bold">{task.titulo}</h3><span className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${task.status === "disponivel" ? "bg-success/15 text-success" : task.status === "agendada" ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}>{task.status === "disponivel" ? "Disponível" : task.status === "agendada" ? "Agendada" : "Concluída"}</span><span className="rounded-full bg-muted px-2.5 py-1 text-[10px] font-bold text-muted-foreground">{task.ativa ? "Publicada" : "Encerrada"}</span></div><p className="mt-1 text-xs text-muted-foreground">Criada por {task.criador}{task.missao ? ` · ${task.missao}` : ""}</p></div>
+                  <button className={button} onClick={() => void toggleTask(task)}>{task.ativa ? "Encerrar tarefa" : "Reabrir tarefa"}</button>
+                </div>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">{[["Pontuação", `${task.pontos} pts`],["Participantes", `${task.participantes}/${task.max_alunos}`],["Participação", task.modo_participacao === "escolher" ? "Aguardando aceite" : task.modo_participacao === "aberto" ? "Aberta" : "Por convite"],["Missão", task.missao ?? "Sem vínculo"]].map(([label,value]) => <div key={label} className="rounded-lg bg-muted/60 px-3 py-2"><p className="text-[10px] font-semibold uppercase text-muted-foreground">{label}</p><p className="mt-1 text-sm font-bold">{value}</p></div>)}</div>
+                {task.inscritos.length ? <div><h4 className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">Turnos e alunos</h4><ul className="divide-y rounded-lg border">{task.inscritos.map((a) => <li key={a.id} className="flex flex-wrap justify-between gap-2 px-3 py-2 text-sm"><span>{a.aluno} <span className="text-xs text-muted-foreground">· {a.status}</span></span><span className="text-muted-foreground">{date(a.data_hora)}</span></li>)}</ul></div> : <Empty>Nenhum aluno aceitou ainda.</Empty>}
+              </article>
+            )) : <Empty>Nenhuma tarefa aberta publicada para esta turma.</Empty>}
+          </div>
+        )}        {["envios", "alteracoes"].map((value) => (
           <TabsContent key={value} value={value} className="space-y-4">
             <p className="text-sm text-muted-foreground">
               {value === "envios"
