@@ -91,7 +91,7 @@ function RankingPage() {
           </div>
           <h1 className="mt-1 text-2xl font-bold sm:text-3xl">Quem está liderando a horta</h1>
           <p className="mt-1 max-w-md text-sm text-white/80">
-            Cumpra tarefas, ganhe pontos e suba no ranking da sua turma e da sua escola.
+            Conclua missões, ganhe pontos e suba no ranking da sua turma e da sua escola.
           </p>
         </motion.section>
 

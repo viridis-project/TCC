@@ -27,7 +27,7 @@ import { useSearch } from "@tanstack/react-router";
 
 export type ScheduleCalendarItem = {
   id: number;
-  task_id?: number | null;
+  missao_publicada_id?: number | null;
   grupo_id?: string | null;
   titulo: string;
   data_hora: string;
@@ -53,7 +53,7 @@ function groupItems(items: ScheduleCalendarItem[]): GroupedItem[] {
       item.titulo,
       item.data_hora,
       item.status,
-      item.task_id ?? "",
+      item.missao_publicada_id ?? "",
       item.grupo_id ?? item.id,
       item.turma ?? "",
       item.missao ?? "",
@@ -62,7 +62,8 @@ function groupItems(items: ScheduleCalendarItem[]): GroupedItem[] {
     if (current) {
       current.ids.push(item.id);
       if (item.aluno && !current.alunos.includes(item.aluno)) current.alunos.push(item.aluno);
-      if (item.resultados) current.resultados = [current.resultados, item.resultados].filter(Boolean).join("\n\n");
+      if (item.resultados)
+        current.resultados = [current.resultados, item.resultados].filter(Boolean).join("\n\n");
       return;
     }
     groups.set(key, {
@@ -143,7 +144,11 @@ export function ScheduleCalendar({
                 const params = new URLSearchParams(window.location.search);
                 params.delete("data");
                 const query = params.toString();
-                window.history.replaceState(null, "", `${window.location.pathname}${query ? `?${query}` : ""}`);
+                window.history.replaceState(
+                  null,
+                  "",
+                  `${window.location.pathname}${query ? `?${query}` : ""}`,
+                );
               }
             }}
             className="min-h-11 rounded-lg px-3 text-sm font-bold text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -186,7 +191,64 @@ export function ScheduleCalendar({
       ) : (
         <MonthView anchor={anchor} items={grouped} onResults={setResultItem} />
       )}
-      {resultItem && <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4 backdrop-blur-sm" onClick={() => setResultItem(null)}><section role="dialog" aria-modal="true" className="w-full max-w-lg rounded-2xl bg-card p-6 shadow-xl" onClick={(event) => event.stopPropagation()}><div className="flex items-start justify-between gap-3"><div><h2 className="text-lg font-bold">{resultItem.titulo}</h2><p className="mt-1 text-sm text-muted-foreground">{format(resultItem.date,"dd/MM/yyyy 'às' HH:mm",{locale:ptBR})} · {resultItem.status === "nao_realizada" ? "Não realizada" : "Concluída"}</p></div><button className="rounded-md border px-3 py-2 text-sm" onClick={() => setResultItem(null)}>Fechar</button></div><div className="mt-4 space-y-4"><div><h3 className="text-xs font-bold uppercase text-muted-foreground">Participantes</h3><p className="mt-1 text-sm">{resultItem.alunos.join(", ") || "Nenhum aluno registrado"}</p></div>{resultItem.descricao && <div><h3 className="text-xs font-bold uppercase text-muted-foreground">Descrição</h3><p className="mt-1 whitespace-pre-wrap text-sm">{resultItem.descricao}</p></div>}{resultItem.missao && <p className="text-sm"><strong>Atividade:</strong> {resultItem.missao}</p>}{resultItem.resultados && <div><h3 className="text-xs font-bold uppercase text-muted-foreground">Resultados enviados</h3><pre className="mt-1 whitespace-pre-wrap rounded-lg bg-muted p-4 text-sm">{resultItem.resultados}</pre></div>}</div></section></div>}
+      {resultItem && (
+        <div
+          className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4 backdrop-blur-sm"
+          onClick={() => setResultItem(null)}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            className="w-full max-w-lg rounded-2xl bg-card p-6 shadow-xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-bold">{resultItem.titulo}</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {format(resultItem.date, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })} ·{" "}
+                  {resultItem.status === "nao_realizada" ? "Não realizada" : "Concluída"}
+                </p>
+              </div>
+              <button
+                className="rounded-md border px-3 py-2 text-sm"
+                onClick={() => setResultItem(null)}
+              >
+                Fechar
+              </button>
+            </div>
+            <div className="mt-4 space-y-4">
+              <div>
+                <h3 className="text-xs font-bold uppercase text-muted-foreground">Participantes</h3>
+                <p className="mt-1 text-sm">
+                  {resultItem.alunos.join(", ") || "Nenhum aluno registrado"}
+                </p>
+              </div>
+              {resultItem.descricao && (
+                <div>
+                  <h3 className="text-xs font-bold uppercase text-muted-foreground">Descrição</h3>
+                  <p className="mt-1 whitespace-pre-wrap text-sm">{resultItem.descricao}</p>
+                </div>
+              )}
+              {resultItem.missao && (
+                <p className="text-sm">
+                  <strong>Atividade:</strong> {resultItem.missao}
+                </p>
+              )}
+              {resultItem.resultados && (
+                <div>
+                  <h3 className="text-xs font-bold uppercase text-muted-foreground">
+                    Resultados enviados
+                  </h3>
+                  <pre className="mt-1 whitespace-pre-wrap rounded-lg bg-muted p-4 text-sm">
+                    {resultItem.resultados}
+                  </pre>
+                </div>
+              )}
+            </div>
+          </section>
+        </div>
+      )}
     </section>
   );
 }
@@ -294,7 +356,7 @@ function WeekView({
                       />
                       {entries.length > 1 && (
                         <div className="mt-1 truncate text-center text-[10px] font-bold text-primary">
-                          +{entries.length - 1} {entries.length === 2 ? "tarefa" : "tarefas"}
+                          +{entries.length - 1} {entries.length === 2 ? "missão" : "missões"}
                         </div>
                       )}
                     </Fragment>
@@ -330,15 +392,21 @@ function WeekEvent({
     <article
       className={cn(
         "flex h-[calc(100%-1.25rem)] min-h-0 flex-col overflow-hidden rounded-lg border p-2 text-xs",
-        (item.status === "concluido" || item.status === "nao_realizada") && "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        (item.status === "concluido" || item.status === "nao_realizada") &&
+          "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         statusClass[item.status],
       )}
       title={`${item.titulo} — ${format(item.date, "HH:mm")}`}
-      onClick={() => (item.status === "concluido" || item.status === "nao_realizada") && onResults(item)}
+      onClick={() =>
+        (item.status === "concluido" || item.status === "nao_realizada") && onResults(item)
+      }
       role={item.status === "concluido" || item.status === "nao_realizada" ? "button" : undefined}
       tabIndex={item.status === "concluido" || item.status === "nao_realizada" ? 0 : undefined}
       onKeyDown={(event) => {
-        if ((item.status === "concluido" || item.status === "nao_realizada") && (event.key === "Enter" || event.key === " ")) {
+        if (
+          (item.status === "concluido" || item.status === "nao_realizada") &&
+          (event.key === "Enter" || event.key === " ")
+        ) {
           event.preventDefault();
           onResults(item);
         }
@@ -351,7 +419,15 @@ function WeekEvent({
         {item.alunos.length ? `Com ${item.alunos.join(", ")}` : "Sem alunos"}
       </div>
       <div className="mt-auto flex items-end justify-between gap-1">
-        <span className="truncate text-[10px] text-muted-foreground">{item.status === "nao_realizada" ? "Não realizada" : item.status === "concluido" ? "Concluída" : item.status === "cancelado" ? "Cancelada" : "Agendada"}</span>
+        <span className="truncate text-[10px] text-muted-foreground">
+          {item.status === "nao_realizada"
+            ? "Não realizada"
+            : item.status === "concluido"
+              ? "Concluída"
+              : item.status === "cancelado"
+                ? "Cancelada"
+                : "Agendada"}
+        </span>
         {professor && item.status === "agendado" && (
           <span className="flex shrink-0 gap-1">
             <button
@@ -379,7 +455,15 @@ function WeekEvent({
   );
 }
 
-function MonthView({ anchor, items, onResults }: { anchor: Date; items: GroupedItem[]; onResults: (item: GroupedItem) => void }) {
+function MonthView({
+  anchor,
+  items,
+  onResults,
+}: {
+  anchor: Date;
+  items: GroupedItem[];
+  onResults: (item: GroupedItem) => void;
+}) {
   const monthStart = startOfMonth(anchor);
   const monthEnd = endOfMonth(anchor);
   const calendarStart = startOfWeek(monthStart, { weekStartsOn: 1 });
@@ -432,7 +516,10 @@ function MonthView({ anchor, items, onResults }: { anchor: Date; items: GroupedI
                     <button
                       key={item.ids.join("-")}
                       type="button"
-                      onClick={() => (item.status === "concluido" || item.status === "nao_realizada") && onResults(item)}
+                      onClick={() =>
+                        (item.status === "concluido" || item.status === "nao_realizada") &&
+                        onResults(item)
+                      }
                       disabled={item.status !== "concluido" && item.status !== "nao_realizada"}
                       className={cn(
                         "flex min-w-0 items-center gap-1 rounded-md border px-1.5 py-1 text-[10px]",
@@ -448,7 +535,7 @@ function MonthView({ anchor, items, onResults }: { anchor: Date; items: GroupedI
                   ))}
                   {entries.length > 2 && (
                     <div className="truncate px-1 text-[10px] font-bold text-primary">
-                      +{entries.length - 2} tarefas
+                      +{entries.length - 2} missões
                     </div>
                   )}
                 </div>

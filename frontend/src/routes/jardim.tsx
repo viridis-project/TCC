@@ -11,8 +11,6 @@ import {
   Lock,
   Check,
   Play,
-  Camera,
-  Share2,
   Trophy,
   Medal,
   Flame,
@@ -23,7 +21,14 @@ import { StaffGarden } from "@/components/staff-garden";
 import { apiFetch, backendAsset, isBrowser, userQuery, type Module as ApiModule } from "@/lib/api";
 import { DatePicker, TimePicker } from "@/components/ui/date-time-picker";
 import { toast } from "sonner";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/jardim")({
   validateSearch: (search: Record<string, unknown>): { escola?: number; turma?: number } => {
@@ -49,7 +54,28 @@ type Planting = {
 };
 
 type UserHistory = { plantios: Planting[] };
-type OpenTask = { id: number; titulo: string; descricao: string; missao: string | null; professor: string; participantes: number; pontos: number; max_alunos: number; modo_participacao: "escolher" | "aberto" | "particular"; horario: string | null; grupo_id: string | null; convite_id: number | null; participando: number; status: "disponivel" | "agendada" | "concluida" };
+type OpenTask = {
+  id: number;
+  titulo: string;
+  descricao: string;
+  instrucoes?: string | null;
+  imagem?: string | null;
+  tipo?: string;
+  missao_id?: number | null;
+  missao: string | null;
+  professor: string;
+  participantes: number;
+  pontos: number;
+  max_alunos: number;
+  modo_participacao: "aberto" | "particular";
+  requer_submissao?: number | string;
+  ativa?: number | string;
+  horario: string | null;
+  grupo_id: string | null;
+  convite_id: number | null;
+  participando: number;
+  status: "disponivel" | "agendada" | "concluida";
+};
 
 const plantingStatuses: Record<PlantStatus, { label: string; className: string }> = {
   pending: { label: "Em análise", className: "bg-warning/15 text-foreground" },
@@ -119,9 +145,8 @@ function GardenPage() {
 }
 
 function StudentGardenPage() {
-  const [activityType, setActivityType] = useState<string | null>(null);
+  const [submissionMission, setSubmissionMission] = useState<OpenTask | null>(null);
   const [selectedTask, setSelectedTask] = useState<OpenTask | null>(null);
-  const [participationMode, setParticipationMode] = useState<"aberto" | "particular">("aberto");
   const [inviteStudent, setInviteStudent] = useState("");
   const [taskDate, setTaskDate] = useState("");
   const [taskTime, setTaskTime] = useState("");
@@ -153,15 +178,30 @@ function StudentGardenPage() {
         }>("/jardim/resumo"),
         apiFetch<{ modulos: ApiModule[] }>("/modulos"),
         apiFetch<UserHistory>("/historico"),
-        apiFetch<{ tarefas_abertas: OpenTask[] }>("/agenda/aluno"),
+        apiFetch<{ missoes_publicadas: OpenTask[] }>("/agenda/aluno"),
       ]);
-      return { garden, modules: moduleResult.modulos, history, tasks: taskResult.tarefas_abertas };
+      return {
+        garden,
+        modules: moduleResult.modulos,
+        history,
+        tasks: taskResult.missoes_publicadas,
+      };
     },
   });
   const { data: classmates = [] } = useQuery({
     queryKey: ["task-classmates", selectedTask?.id, selectedTask?.grupo_id],
-    enabled: isBrowser && !!selectedTask && selectedTask.max_alunos > 1 && selectedTask.modo_participacao === "particular" && !!selectedTask.grupo_id,
-    queryFn: async () => (await apiFetch<{ alunos: { id: number; nome: string }[] }>(`/tarefas-abertas/${selectedTask!.id}/alunos?grupo_id=${selectedTask!.grupo_id}`)).alunos,
+    enabled:
+      isBrowser &&
+      !!selectedTask &&
+      selectedTask.max_alunos > 1 &&
+      selectedTask.modo_participacao === "particular" &&
+      !!selectedTask.grupo_id,
+    queryFn: async () =>
+      (
+        await apiFetch<{ alunos: { id: number; nome: string }[] }>(
+          `/missoes-publicadas/${selectedTask!.id}/alunos?grupo_id=${selectedTask!.grupo_id}`,
+        )
+      ).alunos,
   });
   type RankingRow = {
     posicao: number;
@@ -203,10 +243,13 @@ function StudentGardenPage() {
   const acceptTask = async (taskId: number) => {
     if (!taskDate || !taskTime) return toast.error("Escolha a data e o horário do seu turno");
     try {
-      const result = await apiFetch<{ mensagem: string; grupo_id: string }>(`/tarefas-abertas/${taskId}/aceitar`, {
-        method: "POST",
-        body: JSON.stringify({ data_hora: `${taskDate} ${taskTime}:00`, modo_participacao: participationMode }),
-      });
+      const result = await apiFetch<{ mensagem: string; grupo_id: string }>(
+        `/missoes-publicadas/${taskId}/aceitar`,
+        {
+          method: "POST",
+          body: JSON.stringify({ data_hora: `${taskDate} ${taskTime}:00` }),
+        },
+      );
       toast.success(result.mensagem);
       setTaskDate("");
       setTaskTime("");
@@ -214,18 +257,23 @@ function StudentGardenPage() {
       await queryClient.invalidateQueries({ queryKey: ["jardim"] });
       await queryClient.invalidateQueries({ queryKey: ["agenda"] });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Não foi possível aceitar a tarefa");
+      toast.error(e instanceof Error ? e.message : "Não foi possível aderir à missão");
     }
   };
   const taskAction = async (path: string, body: unknown, successMessage?: string) => {
     if (!selectedTask) return;
     try {
-      const result = await apiFetch<{ mensagem: string }>(path, { method: "POST", body: JSON.stringify(body) });
+      const result = await apiFetch<{ mensagem: string }>(path, {
+        method: "POST",
+        body: JSON.stringify(body),
+      });
       toast.success(successMessage ?? result.mensagem);
       setSelectedTask(null);
       await queryClient.invalidateQueries({ queryKey: ["jardim"] });
       await queryClient.invalidateQueries({ queryKey: ["agenda"] });
-    } catch (e) { toast.error(e instanceof Error ? e.message : "Não foi possível atualizar a task"); }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível atualizar a missão");
+    }
   };
   const modules = data.modules.map((m) => ({ id: m.id, title: m.titulo, progress: m.progresso }));
   const ranking = rankingResult.ranking.map((r) => ({
@@ -513,47 +561,50 @@ function StudentGardenPage() {
         <div className="grid gap-6 lg:grid-cols-[1fr_1.3fr]">
           <Card>
             <h2 className="text-sm font-bold uppercase tracking-wide text-foreground">
-              Atividades Pontuáveis
+              Missões disponíveis
             </h2>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               {data.tasks.map((task) => (
-                <button key={task.id} onClick={() => { setSelectedTask(task); setTaskDate(""); setTaskTime(""); setInviteStudent(""); setParticipationMode("aberto"); }} className="rounded-lg border border-border/60 bg-background/60 p-4 text-left transition hover:border-primary/40 hover:bg-primary/5 sm:col-span-2">
-                  <div className="flex items-center justify-between gap-3"><span className="font-bold">{task.titulo}</span><span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${task.status === "disponivel" ? "bg-success/15 text-success" : task.status === "agendada" ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}>{task.status === "disponivel" ? "Disponível" : task.status === "agendada" ? "Agendada" : "Concluída"}</span></div>
-                  <p className="mt-2 text-xs font-semibold text-muted-foreground">+{task.pontos} pts</p>
-                  <p className="mt-1 text-xs text-muted-foreground">{task.participantes}/{task.max_alunos} alunos · {task.horario ? `Turno ${task.horario}` : "Escolha um turno"}</p>
+                <button
+                  key={task.id}
+                  onClick={() => {
+                    setSelectedTask(task);
+                    setTaskDate("");
+                    setTaskTime("");
+                    setInviteStudent("");
+                  }}
+                  className="rounded-lg border border-border/60 bg-background/60 p-4 text-left transition hover:border-primary/40 hover:bg-primary/5 sm:col-span-2"
+                >
+                  {task.imagem && (
+                    <img
+                      src={task.imagem}
+                      alt={`Imagem da missão ${task.titulo}`}
+                      className="mb-3 max-h-40 w-full rounded-md object-cover"
+                    />
+                  )}
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="font-bold">{task.titulo}</span>
+                    <span
+                      className={`rounded-full px-2.5 py-1 text-xs font-semibold ${task.status === "disponivel" ? "bg-success/15 text-success" : task.status === "agendada" ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}
+                    >
+                      {task.status === "disponivel"
+                        ? "Disponível"
+                        : task.status === "agendada"
+                          ? "Agendada"
+                          : "Concluída"}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-xs font-semibold text-muted-foreground">
+                    +{task.pontos} pts
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {task.participantes}/{task.max_alunos} participantes ·{" "}
+                    {task.horario
+                      ? `Horário ${new Date(task.horario.replace(" ", "T")).toLocaleString("pt-BR")}`
+                      : "Escolha um horário"}
+                  </p>
                 </button>
-              ))}              <motion.button
-                onClick={() => setActivityType("plant")}
-                whileHover={{ y: -1 }}
-                className="flex items-start gap-3 rounded-lg border border-success/30 bg-success/10 p-4 text-left transition-colors hover:bg-success/15"
-              >
-                <div className="grid h-10 w-10 place-items-center rounded-xl bg-success text-success-foreground">
-                  <Camera className="h-5 w-5" />
-                </div>
-                <div>
-                  <div className="text-sm font-bold text-foreground">Confirmar Plantio</div>
-                  <div className="text-xs text-muted-foreground">Tire uma foto do seu plantio</div>
-                  <div className="mt-2 inline-flex rounded-full bg-success px-2 py-0.5 text-[10px] font-bold text-success-foreground">
-                    +50 pts
-                  </div>
-                </div>
-              </motion.button>
-              <motion.button
-                onClick={() => setActivityType("share")}
-                whileHover={{ y: -1 }}
-                className="flex items-start gap-3 rounded-lg border border-warning/30 bg-warning/10 p-4 text-left transition-colors hover:bg-warning/15"
-              >
-                <div className="grid h-10 w-10 place-items-center rounded-xl bg-warning text-warning-foreground">
-                  <Share2 className="h-5 w-5" />
-                </div>
-                <div>
-                  <div className="text-sm font-bold text-foreground">Compartilhar Progresso</div>
-                  <div className="text-xs text-muted-foreground">Mostre seu jardim</div>
-                  <div className="mt-2 inline-flex rounded-full bg-warning px-2 py-0.5 text-[10px] font-bold text-warning-foreground">
-                    +25 pts
-                  </div>
-                </div>
-              </motion.button>
+              ))}{" "}
             </div>
             <div className="mt-5">
               <div className="text-xs font-semibold text-muted-foreground">Sequência diária</div>
@@ -677,9 +728,14 @@ function StudentGardenPage() {
       </div>
 
       <SubmitActivityModal
-        open={!!activityType}
-        onOpenChange={(v) => !v && setActivityType(null)}
-        defaultType={activityType ?? undefined}
+        open={!!submissionMission}
+        onOpenChange={(v) => !v && setSubmissionMission(null)}
+        publishedMissionId={submissionMission?.id}
+        publishedTitle={submissionMission?.titulo}
+        publishedInstructions={submissionMission?.instrucoes || submissionMission?.descricao}
+        publishedType={submissionMission?.tipo}
+        publishedBaseMissionId={submissionMission?.missao_id}
+        publishedPoints={submissionMission?.pontos}
         onSubmitted={() => {
           void queryClient.invalidateQueries({ queryKey: ["historico"] });
           void queryClient.invalidateQueries({ queryKey: ["jardim"] });
@@ -688,26 +744,172 @@ function StudentGardenPage() {
       />
       <Dialog open={!!selectedTask} onOpenChange={(open) => !open && setSelectedTask(null)}>
         <DialogContent className="max-w-lg overflow-hidden rounded-xl border-border/60 p-0">
-          {selectedTask && <>
-            <div className="bg-gradient-hero p-6 text-primary-foreground">
-              <DialogHeader><DialogTitle>{selectedTask.titulo}</DialogTitle><DialogDescription className="text-white/80">Tarefa publicada por {selectedTask.professor}</DialogDescription></DialogHeader>
-            </div>
-            <div className="space-y-4 p-6">
-              <p className="whitespace-pre-wrap text-sm text-muted-foreground">{selectedTask.descricao || "Sem instruções adicionais."}</p>
-              <div className="grid grid-cols-3 gap-2 text-center text-sm">
-                <div className="rounded-lg bg-muted p-3"><strong>{selectedTask.pontos}</strong><div className="text-xs text-muted-foreground">pontos</div></div>
-                <div className="rounded-lg bg-muted p-3"><strong>{selectedTask.participantes}/{selectedTask.max_alunos}</strong><div className="text-xs text-muted-foreground">participantes</div></div>
-                <div className="rounded-lg bg-muted p-3"><strong>{selectedTask.missao ?? "Task"}</strong><div className="text-xs text-muted-foreground">atividade</div></div>
+          {selectedTask && (
+            <>
+              <div className="bg-gradient-hero p-6 text-primary-foreground">
+                <DialogHeader>
+                  <DialogTitle>{selectedTask.titulo}</DialogTitle>
+                  <DialogDescription className="text-white/80">
+                    Missão publicada por {selectedTask.professor}
+                  </DialogDescription>
+                </DialogHeader>
               </div>
-              {selectedTask.horario ? <p className="rounded-lg border p-3 text-sm">Turno escolhido: <strong>{new Date(selectedTask.horario.replace(" ", "T")).toLocaleString("pt-BR")}</strong> · {selectedTask.modo_participacao === "aberto" ? "participação aberta" : "participação particular"}</p> : <>
-                <div className="grid gap-3 sm:grid-cols-2"><label className="text-xs">Data<DatePicker value={taskDate} onChange={setTaskDate} /></label><label className="text-xs">Horário<TimePicker value={taskTime} onChange={setTaskTime} /></label></div>
-                <fieldset className="space-y-2"><legend className="text-xs font-bold">Quem pode participar?</legend><label className="flex gap-2 text-sm"><input type="radio" checked={participationMode === "aberto"} onChange={() => setParticipationMode("aberto")} />Qualquer colega da turma</label><label className="flex gap-2 text-sm"><input type="radio" checked={participationMode === "particular"} onChange={() => setParticipationMode("particular")} />Somente colegas que eu convidar</label></fieldset>
-              </>}
-              <DialogFooter className="flex-wrap">
-                {!selectedTask.horario ? <button onClick={() => void acceptTask(selectedTask.id)} className="min-h-10 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-foreground">Reservar meu turno</button> : selectedTask.max_alunos > 1 && selectedTask.convite_id ? <button onClick={() => void taskAction(`/convites-tarefa/${selectedTask.convite_id}/responder`, { aceitar: true })} className="min-h-10 rounded-lg bg-primary px-4 text-sm font-bold text-primary-foreground">Aceitar convite</button> : selectedTask.max_alunos > 1 && selectedTask.participando && selectedTask.modo_participacao === "particular" ? <div className="flex w-full gap-2"><select value={inviteStudent} onChange={(e) => setInviteStudent(e.target.value)} className="min-h-10 flex-1 rounded-lg border bg-background px-3"><option value="">Convidar aluno...</option>{classmates.map((a) => <option key={a.id} value={a.id}>{a.nome}</option>)}</select><button disabled={!inviteStudent} onClick={() => void taskAction(`/tarefas-abertas/${selectedTask.id}/convidar`, { grupo_id: selectedTask.grupo_id, aluno_id: Number(inviteStudent) })} className="min-h-10 rounded-lg bg-primary px-4 text-sm font-bold text-primary-foreground disabled:opacity-50">Convidar</button></div> : selectedTask.max_alunos > 1 && selectedTask.modo_participacao === "aberto" && !selectedTask.participando ? <button onClick={() => void taskAction(`/tarefas-abertas/${selectedTask.id}/entrar`, { grupo_id: selectedTask.grupo_id })} className="min-h-10 rounded-lg bg-primary px-4 text-sm font-bold text-primary-foreground">Participar deste turno</button> : <button onClick={() => setSelectedTask(null)} className="min-h-10 rounded-lg border px-4 text-sm">Fechar</button>}
-              </DialogFooter>
-            </div>
-          </>}
+              <div className="space-y-4 p-6">
+                {selectedTask.imagem && (
+                  <img
+                    src={selectedTask.imagem}
+                    alt={`Imagem da missão ${selectedTask.titulo}`}
+                    className="max-h-56 w-full rounded-lg border object-cover"
+                  />
+                )}
+                <p className="whitespace-pre-wrap text-sm text-muted-foreground">
+                  {selectedTask.descricao || "Sem descrição adicional."}
+                </p>
+                {selectedTask.instrucoes && (
+                  <div>
+                    <h3 className="mb-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                      Instruções
+                    </h3>
+                    <p className="whitespace-pre-wrap text-sm">{selectedTask.instrucoes}</p>
+                  </div>
+                )}
+                <div className="grid grid-cols-3 gap-2 text-center text-sm">
+                  <div className="rounded-lg bg-muted p-3">
+                    <strong>{selectedTask.pontos}</strong>
+                    <div className="text-xs text-muted-foreground">pontos</div>
+                  </div>
+                  <div className="rounded-lg bg-muted p-3">
+                    <strong>
+                      {selectedTask.participantes}/{selectedTask.max_alunos}
+                    </strong>
+                    <div className="text-xs text-muted-foreground">participantes</div>
+                  </div>
+                  <div className="rounded-lg bg-muted p-3">
+                    <strong>{selectedTask.missao ?? "Missão personalizada"}</strong>
+                    <div className="text-xs text-muted-foreground">referência</div>
+                  </div>
+                </div>
+                {selectedTask.horario ? (
+                  <p className="rounded-lg border p-3 text-sm">
+                    Horário reservado:{" "}
+                    <strong>
+                      {new Date(selectedTask.horario.replace(" ", "T")).toLocaleString("pt-BR")}
+                    </strong>
+                    {selectedTask.max_alunos > 1
+                      ? ` · ${selectedTask.modo_participacao === "aberto" ? "equipe aberta" : "equipe por convite"}`
+                      : " · missão individual"}
+                  </p>
+                ) : Number(selectedTask.ativa ?? 1) === 0 ? (
+                  <p className="rounded-lg border p-3 text-sm text-muted-foreground">
+                    Missão encerrada para novas adesões. Se você já participou, ainda pode enviar a
+                    comprovação pendente.
+                  </p>
+                ) : (
+                  <>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <label className="text-xs">
+                        Data
+                        <DatePicker value={taskDate} onChange={setTaskDate} />
+                      </label>
+                      <label className="text-xs">
+                        Horário
+                        <TimePicker value={taskTime} onChange={setTaskTime} />
+                      </label>
+                    </div>
+                  </>
+                )}
+                <DialogFooter className="flex-wrap">
+                  {selectedTask.participando &&
+                    Number(selectedTask.requer_submissao ?? 1) !== 0 && (
+                      <button
+                        onClick={() => {
+                          setSubmissionMission(selectedTask);
+                          setSelectedTask(null);
+                        }}
+                        className="min-h-10 rounded-lg border border-primary px-4 py-2 text-sm font-bold text-primary"
+                      >
+                        Enviar comprovação
+                      </button>
+                    )}
+                  {Number(selectedTask.ativa ?? 1) === 0 ? (
+                    <button
+                      onClick={() => setSelectedTask(null)}
+                      className="min-h-10 rounded-lg border px-4 text-sm"
+                    >
+                      Fechar
+                    </button>
+                  ) : !selectedTask.horario ? (
+                    <button
+                      onClick={() => void acceptTask(selectedTask.id)}
+                      className="min-h-10 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-foreground"
+                    >
+                      Aderir e reservar horário
+                    </button>
+                  ) : selectedTask.max_alunos > 1 && selectedTask.convite_id ? (
+                    <button
+                      onClick={() =>
+                        void taskAction(`/convites-missao/${selectedTask.convite_id}/responder`, {
+                          aceitar: true,
+                        })
+                      }
+                      className="min-h-10 rounded-lg bg-primary px-4 text-sm font-bold text-primary-foreground"
+                    >
+                      Aceitar convite
+                    </button>
+                  ) : selectedTask.max_alunos > 1 &&
+                    selectedTask.participando &&
+                    selectedTask.modo_participacao === "particular" ? (
+                    <div className="flex w-full gap-2">
+                      <select
+                        value={inviteStudent}
+                        onChange={(e) => setInviteStudent(e.target.value)}
+                        className="min-h-10 flex-1 rounded-lg border bg-background px-3"
+                      >
+                        <option value="">Convidar aluno...</option>
+                        {classmates.map((a) => (
+                          <option key={a.id} value={a.id}>
+                            {a.nome}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        disabled={!inviteStudent}
+                        onClick={() =>
+                          void taskAction(`/missoes-publicadas/${selectedTask.id}/convidar`, {
+                            grupo_id: selectedTask.grupo_id,
+                            aluno_id: Number(inviteStudent),
+                          })
+                        }
+                        className="min-h-10 rounded-lg bg-primary px-4 text-sm font-bold text-primary-foreground disabled:opacity-50"
+                      >
+                        Convidar
+                      </button>
+                    </div>
+                  ) : selectedTask.max_alunos > 1 &&
+                    selectedTask.modo_participacao === "aberto" &&
+                    !selectedTask.participando ? (
+                    <button
+                      onClick={() =>
+                        void taskAction(`/missoes-publicadas/${selectedTask.id}/entrar`, {
+                          grupo_id: selectedTask.grupo_id,
+                        })
+                      }
+                      className="min-h-10 rounded-lg bg-primary px-4 text-sm font-bold text-primary-foreground"
+                    >
+                      Participar deste turno
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => setSelectedTask(null)}
+                      className="min-h-10 rounded-lg border px-4 text-sm"
+                    >
+                      Fechar
+                    </button>
+                  )}
+                </DialogFooter>
+              </div>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </PageShell>

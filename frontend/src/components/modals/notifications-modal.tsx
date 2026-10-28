@@ -27,6 +27,7 @@ const icons: Record<string, React.ElementType> = {
   tarefa_agendada: Calendar,
   designacao_professor: Users,
   convite_tarefa: Users,
+  convite_missao: Users,
 };
 
 export function NotificationsModal({

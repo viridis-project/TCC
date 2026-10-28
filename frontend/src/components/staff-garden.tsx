@@ -47,9 +47,26 @@ type ClassHistory = {
   resumo: { total_envios: number; pendentes: number; aprovados: number; rejeitados: number };
   registros: Activity[];
   paginacao: { pagina: number; paginas: number; total: number };
-  tarefas_abertas: OpenTask[];
+  missoes_publicadas: OpenTask[];
 };
-type OpenTask = { id: number; titulo: string; descricao: string; ativa: number; criado_em: string; missao: string | null; criador: string; pontos: number; max_alunos: number; modo_participacao: string; participantes: number; status: "disponivel" | "agendada" | "concluida"; inscritos: { id: number; titulo: string; data_hora: string; status: string; aluno: string }[] };
+type OpenTask = {
+  id: number;
+  titulo: string;
+  descricao: string;
+  instrucoes?: string | null;
+  imagem?: string | null;
+  tipo?: string;
+  ativa: number;
+  criado_em: string;
+  missao: string | null;
+  criador: string;
+  pontos: number;
+  max_alunos: number;
+  modo_participacao: "aberto" | "particular";
+  participantes: number;
+  status: "disponivel" | "agendada" | "concluida";
+  inscritos: { id: number; titulo: string; data_hora: string; status: string; aluno: string }[];
+};
 
 const card = "rounded-lg border border-border/60 bg-card p-5 shadow-soft";
 const button =
@@ -342,9 +359,15 @@ function ClassGarden({
     });
   const toggleTask = async (task: OpenTask) => {
     try {
-      const result = await apiFetch<{ mensagem: string }>(`/tarefas-abertas/${task.id}`, { method: "PUT", body: JSON.stringify({ ativa: task.ativa ? 0 : 1 }) });
-      toast.success(result.mensagem); await query.refetch();
-    } catch (error) { toast.error(error instanceof Error ? error.message : "Falha ao atualizar tarefa"); }
+      const result = await apiFetch<{ mensagem: string }>(`/missoes-publicadas/${task.id}`, {
+        method: "PUT",
+        body: JSON.stringify({ ativa: task.ativa ? 0 : 1 }),
+      });
+      toast.success(result.mensagem);
+      await query.refetch();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Falha ao atualizar missão");
+    }
   };
   const back = (
     <button className={button} onClick={goBack}>
@@ -394,47 +417,136 @@ function ClassGarden({
           <TabsTrigger value="alteracoes" className="py-3">
             Atualizações
           </TabsTrigger>
-          <TabsTrigger value="tarefas" className="py-3">Tarefas abertas</TabsTrigger>
+          <TabsTrigger value="missoes" className="py-3">
+            Missões publicadas
+          </TabsTrigger>
         </TabsList>
         <div className="flex flex-wrap gap-3">
-          {tab !== "tarefas" && <>
-          <Filter
-            label="Status"
-            value={status}
-            onChange={(value) => {
-              setStatus(value);
-              setPage(1);
-            }}
-            options={Object.entries(statuses).map(([value, item]) => ({
-              value,
-              label: item.label,
-            }))}
-          />
-          <Filter
-            label="Atividade"
-            value={type}
-            onChange={(value) => {
-              setType(value);
-              setPage(1);
-            }}
-            options={Object.entries(types).map(([value, label]) => ({ value, label }))}
-          />
-          </>}
+          {tab !== "missoes" && (
+            <>
+              <Filter
+                label="Status"
+                value={status}
+                onChange={(value) => {
+                  setStatus(value);
+                  setPage(1);
+                }}
+                options={Object.entries(statuses).map(([value, item]) => ({
+                  value,
+                  label: item.label,
+                }))}
+              />
+              <Filter
+                label="Atividade"
+                value={type}
+                onChange={(value) => {
+                  setType(value);
+                  setPage(1);
+                }}
+                options={Object.entries(types).map(([value, label]) => ({ value, label }))}
+              />
+            </>
+          )}
         </div>
-        {tab === "tarefas" && query.data && (
+        {tab === "missoes" && query.data && (
           <div className="space-y-3">
-            {query.data.tarefas_abertas.length ? query.data.tarefas_abertas.map((task) => (
-              <article key={task.id} className={`${card} space-y-4`}>
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                  <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h3 className="text-base font-bold">{task.titulo}</h3><span className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${task.status === "disponivel" ? "bg-success/15 text-success" : task.status === "agendada" ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}>{task.status === "disponivel" ? "Disponível" : task.status === "agendada" ? "Agendada" : "Concluída"}</span><span className="rounded-full bg-muted px-2.5 py-1 text-[10px] font-bold text-muted-foreground">{task.ativa ? "Publicada" : "Encerrada"}</span></div><p className="mt-1 text-xs text-muted-foreground">Criada por {task.criador}{task.missao ? ` · ${task.missao}` : ""}</p></div>
-                  <button className={button} onClick={() => void toggleTask(task)}>{task.ativa ? "Encerrar tarefa" : "Reabrir tarefa"}</button>
-                </div>
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">{[["Pontuação", `${task.pontos} pts`],["Participantes", `${task.participantes}/${task.max_alunos}`],["Participação", task.modo_participacao === "escolher" ? "Aguardando aceite" : task.modo_participacao === "aberto" ? "Aberta" : "Por convite"],["Missão", task.missao ?? "Sem vínculo"]].map(([label,value]) => <div key={label} className="rounded-lg bg-muted/60 px-3 py-2"><p className="text-[10px] font-semibold uppercase text-muted-foreground">{label}</p><p className="mt-1 text-sm font-bold">{value}</p></div>)}</div>
-                {task.inscritos.length ? <div><h4 className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">Turnos e alunos</h4><ul className="divide-y rounded-lg border">{task.inscritos.map((a) => <li key={a.id} className="flex flex-wrap justify-between gap-2 px-3 py-2 text-sm"><span>{a.aluno} <span className="text-xs text-muted-foreground">· {a.status}</span></span><span className="text-muted-foreground">{date(a.data_hora)}</span></li>)}</ul></div> : <Empty>Nenhum aluno aceitou ainda.</Empty>}
-              </article>
-            )) : <Empty>Nenhuma tarefa aberta publicada para esta turma.</Empty>}
+            {query.data.missoes_publicadas.length ? (
+              query.data.missoes_publicadas.map((task) => (
+                <article key={task.id} className={`${card} space-y-4`}>
+                  {task.imagem && (
+                    <img
+                      src={task.imagem}
+                      alt={`Imagem da missão ${task.titulo}`}
+                      className="max-h-48 w-full rounded-lg border object-cover"
+                    />
+                  )}
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="text-base font-bold">{task.titulo}</h3>
+                        <span
+                          className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${task.status === "disponivel" ? "bg-success/15 text-success" : task.status === "agendada" ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}
+                        >
+                          {task.status === "disponivel"
+                            ? "Disponível"
+                            : task.status === "agendada"
+                              ? "Agendada"
+                              : "Concluída"}
+                        </span>
+                        <span className="rounded-full bg-muted px-2.5 py-1 text-[10px] font-bold text-muted-foreground">
+                          {task.ativa ? "Publicada" : "Encerrada"}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Criada por {task.criador}
+                        {task.missao ? ` · ${task.missao}` : ""}
+                      </p>
+                    </div>
+                    <button className={button} onClick={() => void toggleTask(task)}>
+                      {task.ativa ? "Encerrar missão" : "Reabrir missão"}
+                    </button>
+                  </div>
+                  {task.descricao && (
+                    <p className="whitespace-pre-wrap text-sm text-muted-foreground">
+                      {task.descricao}
+                    </p>
+                  )}
+                  {task.instrucoes && (
+                    <p className="whitespace-pre-wrap text-sm">{task.instrucoes}</p>
+                  )}
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    {[
+                      ["Pontuação", `${task.pontos} pts`],
+                      ["Participantes", `${task.participantes}/${task.max_alunos}`],
+                      [
+                        "Participação",
+                        task.max_alunos <= 1
+                          ? "Individual"
+                          : task.modo_participacao === "aberto"
+                            ? "Equipe aberta"
+                            : "Equipe por convite",
+                      ],
+                      ["Referência", task.missao ?? "Personalizada"],
+                    ].map(([label, value]) => (
+                      <div key={label} className="rounded-lg bg-muted/60 px-3 py-2">
+                        <p className="text-[10px] font-semibold uppercase text-muted-foreground">
+                          {label}
+                        </p>
+                        <p className="mt-1 text-sm font-bold">{value}</p>
+                      </div>
+                    ))}
+                  </div>
+                  {task.inscritos.length ? (
+                    <div>
+                      <h4 className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                        Turnos e alunos
+                      </h4>
+                      <ul className="divide-y rounded-lg border">
+                        {task.inscritos.map((a) => (
+                          <li
+                            key={a.id}
+                            className="flex flex-wrap justify-between gap-2 px-3 py-2 text-sm"
+                          >
+                            <span>
+                              {a.aluno}{" "}
+                              <span className="text-xs text-muted-foreground">· {a.status}</span>
+                            </span>
+                            <span className="text-muted-foreground">{date(a.data_hora)}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : (
+                    <Empty>Nenhum aluno aderiu à missão ainda.</Empty>
+                  )}
+                </article>
+              ))
+            ) : (
+              <Empty>Nenhuma missão publicada para esta turma.</Empty>
+            )}
           </div>
-        )}        {["envios", "alteracoes"].map((value) => (
+        )}{" "}
+        {["envios", "alteracoes"].map((value) => (
           <TabsContent key={value} value={value} className="space-y-4">
             <p className="text-sm text-muted-foreground">
               {value === "envios"

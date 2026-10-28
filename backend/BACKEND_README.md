@@ -69,8 +69,9 @@ fetch("http://localhost:8081/api/perfil", { credentials: "include" })
 | `PUT /api/notificacoes/marcar-todas-lidas` | autenticado | marca todas como lidas |
 | `GET /api/agenda/aluno` | aluno | agenda pessoal |
 | `GET /api/agenda/professor` | professor/admin | agenda consolidada e turmas disponíveis |
-| `POST /api/agenda` | professor/admin | agenda tarefa para um ou mais alunos |
-| `PUT /api/agenda/{id}/status` | professor/admin | conclui ou cancela uma tarefa |
+| `POST /api/missoes-publicadas` | professor/admin | publica missão para uma turma; a adesão e o horário são escolhidos pelo aluno |
+| `POST /api/agenda` | professor/admin | alias legado para publicação de missão |
+| `PUT /api/agenda/{id}/status` | professor/admin | conclui ou cancela uma participação em missão |
 | `GET/POST /api/admin/quiz/perguntas` | admin | lista/cria perguntas e opções |
 | `PUT/DELETE /api/admin/quiz/perguntas/{id}` | admin | edita/exclui pergunta |
 | `GET /api/diretor/dashboard` | diretor | indicadores da escola |
@@ -89,6 +90,10 @@ fetch("http://localhost:8081/api/perfil", { credentials: "include" })
 | `GET/POST/PUT/DELETE /api/diretor/recompensas[/{id}]` | diretor | catálogo escolar da instituição |
 
 Erros usam JSON como `{ "erro": "Pontos insuficientes" }` e status adequados. Conflitos de unicidade usam 409; validações usam 422; métodos inválidos usam 405 adicionalmente aos códigos solicitados.
+
+## Mecânica unificada de missões
+
+O modelo de publicação, migração de Tasks, convites, comprovações e pontuação está documentado em [`MISSOES_UNIFICADAS.md`](MISSOES_UNIFICADAS.md). A migração `20261028_published_missions.php` preserva o histórico; faça backup e confira o registro de migrações antes de executá-la em banco existente.
 
 ## Integração com o frontend
 

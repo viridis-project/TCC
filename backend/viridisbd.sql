@@ -3,9 +3,9 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Tempo de geração: 26/08/2026 às 00:15
--- Versão do servidor: 10.4.32-MariaDB
--- Versão do PHP: 8.2.12
+-- Tempo de geração: 28-Out-2026 às 13:49
+-- Versão do servidor: 10.4.28-MariaDB
+-- versão do PHP: 8.2.4
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -26,7 +26,7 @@ USE `viridisbd`;
 -- --------------------------------------------------------
 
 --
--- Estrutura para tabela `agenda`
+-- Estrutura da tabela `agenda`
 --
 
 CREATE TABLE `agenda` (
@@ -38,21 +38,24 @@ CREATE TABLE `agenda` (
   `titulo` varchar(150) NOT NULL,
   `data_hora` datetime NOT NULL,
   `status` enum('agendado','concluido','cancelado') NOT NULL DEFAULT 'agendado',
-  `criado_em` datetime NOT NULL DEFAULT current_timestamp()
+  `criado_em` datetime NOT NULL DEFAULT current_timestamp(),
+  `task_id` int(11) DEFAULT NULL,
+  `grupo_id` char(36) DEFAULT NULL,
+  `missao_publicada_id` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Despejando dados para a tabela `agenda`
+-- Extraindo dados da tabela `agenda`
 --
 
-INSERT INTO `agenda` (`id`, `aluno_id`, `professor_id`, `turma_id`, `missao_id`, `titulo`, `data_hora`, `status`, `criado_em`) VALUES
-(1, 1, 2, 1, NULL, 'Teste técnico agenda 20260825', '2026-08-26 09:30:00', 'concluido', '2026-08-25 18:50:59'),
-(2, 1, 2, 1, NULL, 'Teste vínculo turma agenda 20260825', '2026-08-27 10:15:00', 'agendado', '2026-08-25 19:14:11');
+INSERT INTO `agenda` (`id`, `aluno_id`, `professor_id`, `turma_id`, `missao_id`, `titulo`, `data_hora`, `status`, `criado_em`, `task_id`, `grupo_id`, `missao_publicada_id`) VALUES
+(1, 1, 2, 1, NULL, 'Teste técnico agenda 20260825', '2026-08-26 09:30:00', 'concluido', '2026-08-25 18:50:59', 1, NULL, 1),
+(2, 1, 2, 1, NULL, 'Teste vínculo turma agenda 20260825', '2026-08-27 10:15:00', 'agendado', '2026-08-25 19:14:11', 2, NULL, 2);
 
 -- --------------------------------------------------------
 
 --
--- Estrutura para tabela `certificado`
+-- Estrutura da tabela `certificado`
 --
 
 CREATE TABLE `certificado` (
@@ -66,7 +69,7 @@ CREATE TABLE `certificado` (
 -- --------------------------------------------------------
 
 --
--- Estrutura para tabela `conquista`
+-- Estrutura da tabela `conquista`
 --
 
 CREATE TABLE `conquista` (
@@ -78,7 +81,7 @@ CREATE TABLE `conquista` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Despejando dados para a tabela `conquista`
+-- Extraindo dados da tabela `conquista`
 --
 
 INSERT INTO `conquista` (`id`, `titulo`, `descricao`, `icone`, `regra`) VALUES
@@ -92,7 +95,7 @@ INSERT INTO `conquista` (`id`, `titulo`, `descricao`, `icone`, `regra`) VALUES
 -- --------------------------------------------------------
 
 --
--- Estrutura para tabela `convite_professor`
+-- Estrutura da tabela `convite_professor`
 --
 
 CREATE TABLE `convite_professor` (
@@ -110,7 +113,7 @@ CREATE TABLE `convite_professor` (
 -- --------------------------------------------------------
 
 --
--- Estrutura para tabela `cronograma_aluno`
+-- Estrutura da tabela `cronograma_aluno`
 --
 
 CREATE TABLE `cronograma_aluno` (
@@ -123,7 +126,7 @@ CREATE TABLE `cronograma_aluno` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Despejando dados para a tabela `cronograma_aluno`
+-- Extraindo dados da tabela `cronograma_aluno`
 --
 
 INSERT INTO `cronograma_aluno` (`id`, `aluno_id`, `missao_id`, `data_sugerida`, `data_limite_personalizada`, `status_atividade`) VALUES
@@ -132,7 +135,34 @@ INSERT INTO `cronograma_aluno` (`id`, `aluno_id`, `missao_id`, `data_sugerida`, 
 -- --------------------------------------------------------
 
 --
--- Estrutura para tabela `horta`
+-- Estrutura da tabela `curso`
+--
+
+CREATE TABLE `curso` (
+  `id` int(11) NOT NULL,
+  `titulo` varchar(150) NOT NULL,
+  `descricao` varchar(1000) NOT NULL DEFAULT '',
+  `escopo` enum('app','escola','turma') NOT NULL,
+  `instituicao_id` int(11) DEFAULT NULL,
+  `turma_id` int(11) DEFAULT NULL,
+  `criador_id` int(11) DEFAULT NULL,
+  `publicado` tinyint(1) NOT NULL DEFAULT 0,
+  `ativo` tinyint(1) NOT NULL DEFAULT 1,
+  `legado` tinyint(1) NOT NULL DEFAULT 0,
+  `criado_em` datetime NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Extraindo dados da tabela `curso`
+--
+
+INSERT INTO `curso` (`id`, `titulo`, `descricao`, `escopo`, `instituicao_id`, `turma_id`, `criador_id`, `publicado`, `ativo`, `legado`, `criado_em`) VALUES
+(1, 'Trilha de sustentabilidade', 'Conteúdo original do Viridis.', 'app', NULL, NULL, NULL, 1, 1, 1, '2026-08-25 17:59:57');
+
+-- --------------------------------------------------------
+
+--
+-- Estrutura da tabela `horta`
 --
 
 CREATE TABLE `horta` (
@@ -145,7 +175,7 @@ CREATE TABLE `horta` (
 -- --------------------------------------------------------
 
 --
--- Estrutura para tabela `inspecao_horta`
+-- Estrutura da tabela `inspecao_horta`
 --
 
 CREATE TABLE `inspecao_horta` (
@@ -160,7 +190,7 @@ CREATE TABLE `inspecao_horta` (
 -- --------------------------------------------------------
 
 --
--- Estrutura para tabela `instituicao`
+-- Estrutura da tabela `instituicao`
 --
 
 CREATE TABLE `instituicao` (
@@ -171,44 +201,17 @@ CREATE TABLE `instituicao` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Despejando dados para a tabela `instituicao`
+-- Extraindo dados da tabela `instituicao`
 --
 
 INSERT INTO `instituicao` (`id`, `nome`, `cnpj`, `data_cadastro`) VALUES
-(1, 'Escola Viridis', NULL, '2026-08-25 17:59:57');
+(1, 'Escola Viridis', NULL, '2026-08-25 17:59:57'),
+(3, 'Colégio Semente Verde', NULL, '2026-10-28 08:10:20');
 
 -- --------------------------------------------------------
 
 --
--- Estrutura para tabela `curso`
---
-
-CREATE TABLE `curso` (
-  `id` int(11) NOT NULL,
-  `titulo` varchar(150) NOT NULL,
-  `descricao` varchar(1000) NOT NULL DEFAULT '',
-  `escopo` enum('app','escola','turma') NOT NULL,
-  `instituicao_id` int(11) DEFAULT NULL,
-  `turma_id` int(11) DEFAULT NULL,
-  `criador_id` int(11) DEFAULT NULL,
-  `publicado` tinyint(1) NOT NULL DEFAULT 0,
-  `ativo` tinyint(1) NOT NULL DEFAULT 1,
-  `legado` tinyint(1) NOT NULL DEFAULT 0,
-  `criado_em` datetime NOT NULL DEFAULT current_timestamp(),
-  KEY `idx_curso_publico` (`escopo`,`instituicao_id`,`turma_id`,`publicado`,`ativo`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Despejando dados para a tabela `curso`
---
-
-INSERT INTO `curso` (`id`, `titulo`, `descricao`, `escopo`, `instituicao_id`, `turma_id`, `criador_id`, `publicado`, `ativo`, `legado`, `criado_em`) VALUES
-(1, 'Trilha de sustentabilidade', 'Conteúdo original do Viridis.', 'app', NULL, NULL, NULL, 1, 1, 1, '2026-08-25 17:59:57');
-
--- --------------------------------------------------------
-
---
--- Estrutura para tabela `licao`
+-- Estrutura da tabela `licao`
 --
 
 CREATE TABLE `licao` (
@@ -222,30 +225,30 @@ CREATE TABLE `licao` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Despejando dados para a tabela `licao`
+-- Extraindo dados da tabela `licao`
 --
 
-INSERT INTO `licao` (`id`, `modulo_id`, `titulo`, `kind`, `xp`, `ordem`) VALUES
-(1, 1, 'Sementes e germinação', 'lesson', 50, 1),
-(2, 1, 'Tipos de solo', 'lesson', 50, 2),
-(3, 1, 'Desafio: Primeira muda', 'challenge', 100, 3),
-(4, 1, 'Avaliação do módulo', 'exam', 150, 4),
-(5, 2, 'Macronutrientes', 'lesson', 50, 1),
-(6, 2, 'Composto orgânico', 'lesson', 50, 2),
-(7, 2, 'Desafio: Composteira', 'challenge', 100, 3),
-(8, 3, 'Insetos benéficos', 'lesson', 50, 1),
-(9, 3, 'Repelentes naturais', 'lesson', 60, 2),
-(10, 3, 'Desafio: Calda caseira', 'challenge', 100, 3),
-(11, 3, 'Avaliação', 'exam', 150, 4),
-(12, 4, 'Grupos alimentares', 'lesson', 50, 1),
-(13, 4, 'Receitas da horta', 'lesson', 50, 2),
-(14, 5, 'Minhocário', 'lesson', 80, 1),
-(15, 6, 'Certificado Viridis', 'certificate', 500, 1);
+INSERT INTO `licao` (`id`, `modulo_id`, `titulo`, `kind`, `xp`, `ordem`, `ativo`) VALUES
+(1, 1, 'Sementes e germinação', 'lesson', 50, 1, 1),
+(2, 1, 'Tipos de solo', 'lesson', 50, 2, 1),
+(3, 1, 'Desafio: Primeira muda', 'challenge', 100, 3, 1),
+(4, 1, 'Avaliação do módulo', 'exam', 150, 4, 1),
+(5, 2, 'Macronutrientes', 'lesson', 50, 1, 1),
+(6, 2, 'Composto orgânico', 'lesson', 50, 2, 1),
+(7, 2, 'Desafio: Composteira', 'challenge', 100, 3, 1),
+(8, 3, 'Insetos benéficos', 'lesson', 50, 1, 1),
+(9, 3, 'Repelentes naturais', 'lesson', 60, 2, 1),
+(10, 3, 'Desafio: Calda caseira', 'challenge', 100, 3, 1),
+(11, 3, 'Avaliação', 'exam', 150, 4, 1),
+(12, 4, 'Grupos alimentares', 'lesson', 50, 1, 1),
+(13, 4, 'Receitas da horta', 'lesson', 50, 2, 1),
+(14, 5, 'Minhocário', 'lesson', 80, 1, 1),
+(15, 6, 'Certificado Viridis', 'certificate', 500, 1, 1);
 
 -- --------------------------------------------------------
 
 --
--- Estrutura para tabela `missao`
+-- Estrutura da tabela `missao`
 --
 
 CREATE TABLE `missao` (
@@ -259,7 +262,7 @@ CREATE TABLE `missao` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Despejando dados para a tabela `missao`
+-- Extraindo dados da tabela `missao`
 --
 
 INSERT INTO `missao` (`id`, `titulo`, `descricao`, `tipo`, `pontos_recompensa`, `criador_id`, `data_criacao`) VALUES
@@ -271,7 +274,77 @@ INSERT INTO `missao` (`id`, `titulo`, `descricao`, `tipo`, `pontos_recompensa`, 
 -- --------------------------------------------------------
 
 --
--- Estrutura para tabela `modulo`
+-- Estrutura da tabela `missao_convite`
+--
+
+CREATE TABLE `missao_convite` (
+  `id` int(11) NOT NULL,
+  `missao_publicada_id` int(11) NOT NULL,
+  `grupo_id` char(36) NOT NULL,
+  `convidado_id` int(11) NOT NULL,
+  `convidante_id` int(11) NOT NULL,
+  `status` enum('pendente','aceito','recusado') NOT NULL DEFAULT 'pendente',
+  `criado_em` datetime NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Estrutura da tabela `missao_pontuacao`
+--
+
+CREATE TABLE `missao_pontuacao` (
+  `missao_publicada_id` int(11) NOT NULL,
+  `grupo_id` char(36) NOT NULL,
+  `aluno_id` int(11) NOT NULL,
+  `pontos` int(11) NOT NULL DEFAULT 0,
+  `fonte` enum('submissao','conclusao_legada') NOT NULL,
+  `criado_em` datetime NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Extraindo dados da tabela `missao_pontuacao`
+--
+
+INSERT INTO `missao_pontuacao` (`missao_publicada_id`, `grupo_id`, `aluno_id`, `pontos`, `fonte`, `criado_em`) VALUES
+(1, 'legacy-1', 1, 0, 'conclusao_legada', '2026-08-25 18:50:59');
+
+-- --------------------------------------------------------
+
+--
+-- Estrutura da tabela `missao_publicada`
+--
+
+CREATE TABLE `missao_publicada` (
+  `id` int(11) NOT NULL,
+  `turma_id` int(11) NOT NULL,
+  `criador_id` int(11) NOT NULL,
+  `missao_id` int(11) DEFAULT NULL,
+  `titulo` varchar(150) NOT NULL,
+  `descricao` text NOT NULL,
+  `instrucoes` text DEFAULT NULL,
+  `imagem` varchar(500) DEFAULT NULL,
+  `tipo` enum('plant','water','compost','share','outro') NOT NULL DEFAULT 'outro',
+  `pontos` int(11) NOT NULL DEFAULT 0,
+  `max_alunos` int(11) NOT NULL DEFAULT 1,
+  `modo_participacao` enum('aberto','particular') NOT NULL DEFAULT 'aberto',
+  `requer_submissao` tinyint(1) NOT NULL DEFAULT 1,
+  `ativa` tinyint(1) NOT NULL DEFAULT 1,
+  `criado_em` datetime NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Extraindo dados da tabela `missao_publicada`
+--
+
+INSERT INTO `missao_publicada` (`id`, `turma_id`, `criador_id`, `missao_id`, `titulo`, `descricao`, `instrucoes`, `imagem`, `tipo`, `pontos`, `max_alunos`, `modo_participacao`, `requer_submissao`, `ativa`, `criado_em`) VALUES
+(1, 1, 2, NULL, 'Teste técnico agenda 20260825', '', '', NULL, 'outro', 0, 1, 'aberto', 0, 1, '2026-10-28 08:10:20'),
+(2, 1, 2, NULL, 'Teste vínculo turma agenda 20260825', '', '', NULL, 'outro', 0, 1, 'aberto', 0, 1, '2026-10-28 08:10:20');
+
+-- --------------------------------------------------------
+
+--
+-- Estrutura da tabela `modulo`
 --
 
 CREATE TABLE `modulo` (
@@ -285,23 +358,21 @@ CREATE TABLE `modulo` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Despejando dados para a tabela `modulo`
+-- Extraindo dados da tabela `modulo`
 --
 
-INSERT INTO `modulo` (`id`, `titulo`, `descricao`, `cor`, `ordem`) VALUES
-(1, 'Plantio Básico', 'Fundamentos do cultivo e preparação do solo', 'oklch(0.62 0.18 150)', 1),
-(2, 'Nutrição do Solo', 'Compostagem, adubos e ciclo de nutrientes', 'oklch(0.62 0.18 150)', 2),
-(3, 'Controle de Pragas', 'Manejo natural e prevenção integrada', 'oklch(0.65 0.17 95)', 3),
-(4, 'Alimentação Saudável', 'Da horta ao prato: nutrição consciente', 'oklch(0.62 0.16 240)', 4),
-(5, 'Compostagem Avançada', 'Vermicompostagem e bioinsumos', 'oklch(0.70 0.18 50)', 5),
-(6, 'Certificado Final', 'Conclusão da trilha de sustentabilidade', 'oklch(0.75 0.16 75)', 6);
-
-UPDATE `modulo` SET `curso_id` = 1 WHERE `curso_id` IS NULL;
+INSERT INTO `modulo` (`id`, `curso_id`, `titulo`, `descricao`, `cor`, `ordem`, `ativo`) VALUES
+(1, 1, 'Plantio Básico', 'Fundamentos do cultivo e preparação do solo', 'oklch(0.62 0.18 150)', 1, 1),
+(2, 1, 'Nutrição do Solo', 'Compostagem, adubos e ciclo de nutrientes', 'oklch(0.62 0.18 150)', 2, 1),
+(3, 1, 'Controle de Pragas', 'Manejo natural e prevenção integrada', 'oklch(0.65 0.17 95)', 3, 1),
+(4, 1, 'Alimentação Saudável', 'Da horta ao prato: nutrição consciente', 'oklch(0.62 0.16 240)', 4, 1),
+(5, 1, 'Compostagem Avançada', 'Vermicompostagem e bioinsumos', 'oklch(0.70 0.18 50)', 5, 1),
+(6, 1, 'Certificado Final', 'Conclusão da trilha de sustentabilidade', 'oklch(0.75 0.16 75)', 6, 1);
 
 -- --------------------------------------------------------
 
 --
--- Estrutura para tabela `notificacao`
+-- Estrutura da tabela `notificacao`
 --
 
 CREATE TABLE `notificacao` (
@@ -316,7 +387,7 @@ CREATE TABLE `notificacao` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Despejando dados para a tabela `notificacao`
+-- Extraindo dados da tabela `notificacao`
 --
 
 INSERT INTO `notificacao` (`id`, `usuario_id`, `tipo`, `titulo`, `mensagem`, `lida`, `link`, `criada_em`) VALUES
@@ -328,7 +399,7 @@ INSERT INTO `notificacao` (`id`, `usuario_id`, `tipo`, `titulo`, `mensagem`, `li
 -- --------------------------------------------------------
 
 --
--- Estrutura para tabela `opcao_quiz`
+-- Estrutura da tabela `opcao_quiz`
 --
 
 CREATE TABLE `opcao_quiz` (
@@ -339,7 +410,7 @@ CREATE TABLE `opcao_quiz` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Despejando dados para a tabela `opcao_quiz`
+-- Extraindo dados da tabela `opcao_quiz`
 --
 
 INSERT INTO `opcao_quiz` (`id`, `pergunta_id`, `texto_opcao`, `is_correta`) VALUES
@@ -351,7 +422,7 @@ INSERT INTO `opcao_quiz` (`id`, `pergunta_id`, `texto_opcao`, `is_correta`) VALU
 -- --------------------------------------------------------
 
 --
--- Estrutura para tabela `parceiro`
+-- Estrutura da tabela `parceiro`
 --
 
 CREATE TABLE `parceiro` (
@@ -364,7 +435,7 @@ CREATE TABLE `parceiro` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Despejando dados para a tabela `parceiro`
+-- Extraindo dados da tabela `parceiro`
 --
 
 INSERT INTO `parceiro` (`id`, `nome`, `tipo`, `email`, `telefone`, `ativo`) VALUES
@@ -378,7 +449,7 @@ INSERT INTO `parceiro` (`id`, `nome`, `tipo`, `email`, `telefone`, `ativo`) VALU
 -- --------------------------------------------------------
 
 --
--- Estrutura para tabela `perfil`
+-- Estrutura da tabela `perfil`
 --
 
 CREATE TABLE `perfil` (
@@ -388,7 +459,7 @@ CREATE TABLE `perfil` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Despejando dados para a tabela `perfil`
+-- Extraindo dados da tabela `perfil`
 --
 
 INSERT INTO `perfil` (`id`, `nome`, `descricao`) VALUES
@@ -400,7 +471,7 @@ INSERT INTO `perfil` (`id`, `nome`, `descricao`) VALUES
 -- --------------------------------------------------------
 
 --
--- Estrutura para tabela `pergunta_quiz`
+-- Estrutura da tabela `pergunta_quiz`
 --
 
 CREATE TABLE `pergunta_quiz` (
@@ -414,16 +485,16 @@ CREATE TABLE `pergunta_quiz` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Despejando dados para a tabela `pergunta_quiz`
+-- Extraindo dados da tabela `pergunta_quiz`
 --
 
-INSERT INTO `pergunta_quiz` (`id`, `criador_id`, `licao_id`, `texto_pergunta`, `explicacao`, `pontos_recompensa`) VALUES
-(1, 2, 1, 'Qual é a principal função das raízes de uma planta?', 'As raízes fixam a planta e absorvem água e minerais essenciais para seu desenvolvimento.', 5);
+INSERT INTO `pergunta_quiz` (`id`, `criador_id`, `licao_id`, `texto_pergunta`, `explicacao`, `pontos_recompensa`, `ativo`) VALUES
+(1, 2, 1, 'Qual é a principal função das raízes de uma planta?', 'As raízes fixam a planta e absorvem água e minerais essenciais para seu desenvolvimento.', 5, 1);
 
 -- --------------------------------------------------------
 
 --
--- Estrutura para tabela `progresso_quiz`
+-- Estrutura da tabela `progresso_quiz`
 --
 
 CREATE TABLE `progresso_quiz` (
@@ -435,7 +506,7 @@ CREATE TABLE `progresso_quiz` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Despejando dados para a tabela `progresso_quiz`
+-- Extraindo dados da tabela `progresso_quiz`
 --
 
 INSERT INTO `progresso_quiz` (`id`, `aluno_id`, `pergunta_id`, `acertou`, `data_resposta`) VALUES
@@ -445,7 +516,7 @@ INSERT INTO `progresso_quiz` (`id`, `aluno_id`, `pergunta_id`, `acertou`, `data_
 -- --------------------------------------------------------
 
 --
--- Estrutura para tabela `recompensa`
+-- Estrutura da tabela `recompensa`
 --
 
 CREATE TABLE `recompensa` (
@@ -460,7 +531,7 @@ CREATE TABLE `recompensa` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Despejando dados para a tabela `recompensa`
+-- Extraindo dados da tabela `recompensa`
 --
 
 INSERT INTO `recompensa` (`id`, `titulo`, `escopo`, `parceiro_id`, `instituicao_id`, `pontos_necessarios`, `imagem`, `ativo`) VALUES
@@ -475,7 +546,7 @@ INSERT INTO `recompensa` (`id`, `titulo`, `escopo`, `parceiro_id`, `instituicao_
 -- --------------------------------------------------------
 
 --
--- Estrutura para tabela `resgate`
+-- Estrutura da tabela `resgate`
 --
 
 CREATE TABLE `resgate` (
@@ -489,7 +560,31 @@ CREATE TABLE `resgate` (
 -- --------------------------------------------------------
 
 --
--- Estrutura para tabela `submissao_missao`
+-- Estrutura da tabela `schema_migration`
+--
+
+CREATE TABLE `schema_migration` (
+  `nome` varchar(150) NOT NULL,
+  `aplicada_em` datetime NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Extraindo dados da tabela `schema_migration`
+--
+
+INSERT INTO `schema_migration` (`nome`, `aplicada_em`) VALUES
+('20260909_learning.php', '2026-10-28 08:09:16'),
+('20260909_learning_indexes.php', '2026-10-28 08:09:16'),
+('20260909_optional_reward_partner.php', '2026-10-28 08:09:16'),
+('20260909_seed_ranking_demo.php', '2026-10-28 08:10:20'),
+('20261023_open_tasks.php', '2026-10-28 08:10:20'),
+('20261024_team_task_participation.php', '2026-10-28 08:10:20'),
+('20261028_published_missions.php', '2026-10-28 09:48:04');
+
+-- --------------------------------------------------------
+
+--
+-- Estrutura da tabela `submissao_missao`
 --
 
 CREATE TABLE `submissao_missao` (
@@ -504,21 +599,67 @@ CREATE TABLE `submissao_missao` (
   `comentario_professor` varchar(255) DEFAULT NULL,
   `revisado_por` int(11) DEFAULT NULL,
   `revisado_em` datetime DEFAULT NULL,
-  `data_envio` datetime DEFAULT current_timestamp()
+  `data_envio` datetime DEFAULT current_timestamp(),
+  `missao_publicada_id` int(11) DEFAULT NULL,
+  `grupo_id` char(36) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Despejando dados para a tabela `submissao_missao`
+-- Extraindo dados da tabela `submissao_missao`
 --
 
-INSERT INTO `submissao_missao` (`id`, `aluno_id`, `missao_id`, `descricao`, `url_foto`, `ia_validada`, `professor_validado`, `status`, `comentario_professor`, `revisado_por`, `revisado_em`, `data_envio`) VALUES
-(1, 3, 1, 'plantei', '/uploads/4246460f2aee61d2b48e2ba5d85278a0.png', NULL, 1, 'approved', 'Ótimo trabalho! 🌱', 2, '2026-08-25 18:24:45', '2026-08-25 18:23:37'),
-(2, 3, 3, 'teste', '/uploads/b3f9962a576dd869d80f19b8abed0919.png', NULL, 1, 'approved', 'Adicione mais detalhes da foto', 2, '2026-08-25 18:38:37', '2026-08-25 18:38:28');
+INSERT INTO `submissao_missao` (`id`, `aluno_id`, `missao_id`, `descricao`, `url_foto`, `ia_validada`, `professor_validado`, `status`, `comentario_professor`, `revisado_por`, `revisado_em`, `data_envio`, `missao_publicada_id`, `grupo_id`) VALUES
+(1, 3, 1, 'plantei', '/uploads/4246460f2aee61d2b48e2ba5d85278a0.png', NULL, 1, 'approved', 'Ótimo trabalho! 🌱', 2, '2026-08-25 18:24:45', '2026-08-25 18:23:37', NULL, NULL),
+(2, 3, 3, 'teste', '/uploads/b3f9962a576dd869d80f19b8abed0919.png', NULL, 1, 'approved', 'Adicione mais detalhes da foto', 2, '2026-08-25 18:38:37', '2026-08-25 18:38:28', NULL, NULL);
 
 -- --------------------------------------------------------
 
 --
--- Estrutura para tabela `turma_escolar`
+-- Estrutura da tabela `tarefa_aberta`
+--
+
+CREATE TABLE `tarefa_aberta` (
+  `id` int(11) NOT NULL,
+  `turma_id` int(11) NOT NULL,
+  `criador_id` int(11) NOT NULL,
+  `missao_id` int(11) DEFAULT NULL,
+  `titulo` varchar(150) NOT NULL,
+  `descricao` text NOT NULL,
+  `pontos` int(11) NOT NULL DEFAULT 0,
+  `max_alunos` int(11) NOT NULL DEFAULT 1,
+  `modo_participacao` enum('escolher','aberto','particular') NOT NULL DEFAULT 'escolher',
+  `ativa` tinyint(1) NOT NULL DEFAULT 1,
+  `criado_em` datetime NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Extraindo dados da tabela `tarefa_aberta`
+--
+
+INSERT INTO `tarefa_aberta` (`id`, `turma_id`, `criador_id`, `missao_id`, `titulo`, `descricao`, `pontos`, `max_alunos`, `modo_participacao`, `ativa`, `criado_em`) VALUES
+(1, 1, 2, NULL, 'Teste técnico agenda 20260825', '', 0, 1, 'escolher', 1, '2026-10-28 08:10:20'),
+(2, 1, 2, NULL, 'Teste vínculo turma agenda 20260825', '', 0, 1, 'escolher', 1, '2026-10-28 08:10:20');
+
+-- --------------------------------------------------------
+
+--
+-- Estrutura da tabela `tarefa_convite`
+--
+
+CREATE TABLE `tarefa_convite` (
+  `id` int(11) NOT NULL,
+  `task_id` int(11) NOT NULL,
+  `grupo_id` char(36) NOT NULL,
+  `convidado_id` int(11) NOT NULL,
+  `convidante_id` int(11) NOT NULL,
+  `status` enum('pendente','aceito','recusado') NOT NULL DEFAULT 'pendente',
+  `criado_em` datetime NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Estrutura da tabela `turma_escolar`
 --
 
 CREATE TABLE `turma_escolar` (
@@ -532,17 +673,20 @@ CREATE TABLE `turma_escolar` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Despejando dados para a tabela `turma_escolar`
+-- Extraindo dados da tabela `turma_escolar`
 --
 
 INSERT INTO `turma_escolar` (`id`, `instituicao_id`, `nome`, `ano_letivo`, `codigo_acesso`, `codigo_ativo`, `criado_em`) VALUES
 (1, 1, '7A', '2026', '7A-4CF7', 1, '2026-08-25 18:40:26'),
-(2, 1, 'teste', '2026', 'TES-66D2', 1, '2026-08-25 18:57:35');
+(2, 1, '7B', '2026', '7B-9K3M', 1, '2026-08-25 18:57:35'),
+(6, 1, '8A', '2026', '8A-4T7Q', 1, '2026-10-28 08:10:20'),
+(7, 3, '6A', '2026', '6A-77B3', 1, '2026-10-28 08:10:20'),
+(8, 3, '6B', '2026', '6B-91FZ', 1, '2026-10-28 08:10:20');
 
 -- --------------------------------------------------------
 
 --
--- Estrutura para tabela `turma_professor`
+-- Estrutura da tabela `turma_professor`
 --
 
 CREATE TABLE `turma_professor` (
@@ -552,7 +696,7 @@ CREATE TABLE `turma_professor` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Despejando dados para a tabela `turma_professor`
+-- Extraindo dados da tabela `turma_professor`
 --
 
 INSERT INTO `turma_professor` (`turma_id`, `professor_id`, `designado_em`) VALUES
@@ -562,7 +706,7 @@ INSERT INTO `turma_professor` (`turma_id`, `professor_id`, `designado_em`) VALUE
 -- --------------------------------------------------------
 
 --
--- Estrutura para tabela `usuario`
+-- Estrutura da tabela `usuario`
 --
 
 CREATE TABLE `usuario` (
@@ -590,20 +734,28 @@ CREATE TABLE `usuario` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Despejando dados para a tabela `usuario`
+-- Extraindo dados da tabela `usuario`
 --
 
 INSERT INTO `usuario` (`id`, `nome`, `username`, `email`, `senha`, `cpf`, `telefone`, `avatar`, `turma`, `turma_id`, `pontos_totais`, `nivel`, `xp`, `xp_proximo_nivel`, `streak_dias`, `ultima_atividade_em`, `notificacoes_ativas`, `tema_escuro`, `perfil_id`, `instituicao_id`, `data_criacao`) VALUES
 (1, 'Ana Clara Ferreira', 'ana.clara', 'ana@escola.edu.br', '$2y$10$FInAb7Fv1ncs210gAJAInORjXwKn/.chmO7s0gXe80JmlJSgUDOii', NULL, NULL, NULL, '7A', 1, 1250, 7, 1250, 1500, 12, NULL, 1, 0, 1, 1, '2026-08-25 17:59:57'),
 (2, 'Professor Viridis', 'prof.viridis', 'professor@escola.edu.br', '$2y$10$FInAb7Fv1ncs210gAJAInORjXwKn/.chmO7s0gXe80JmlJSgUDOii', NULL, NULL, NULL, NULL, NULL, 0, 1, 0, 100, 0, NULL, 1, 0, 2, 1, '2026-08-25 17:59:57'),
-(3, 'teste', 'teste', 'teste@email.com', '$2y$10$DyEmpSvFWmPX6EQO.Za/c.TJzEYQcWOkfaViTRLfSacC5ZUPVtJDG', NULL, '', 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQYIFpkwgnWmQP6CuNinEP0T7fzFT6HEq819-f8jasWMtrqcDk5Zt72SL3f&s=10', '', NULL, 130, 1, 75, 200, 0, '2026-08-25', 1, 0, 1, NULL, '2026-08-25 18:23:05'),
+(3, 'Rafael Nogueira', 'teste', 'teste@email.com', '$2y$10$DyEmpSvFWmPX6EQO.Za/c.TJzEYQcWOkfaViTRLfSacC5ZUPVtJDG', NULL, '', 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQYIFpkwgnWmQP6CuNinEP0T7fzFT6HEq819-f8jasWMtrqcDk5Zt72SL3f&s=10', '7B', 2, 130, 1, 75, 200, 0, '2026-08-25', 1, 0, 1, 1, '2026-08-25 18:23:05'),
 (4, 'Administrador Viridis', 'admin.viridis', 'admin@escola.edu.br', '$2y$10$FInAb7Fv1ncs210gAJAInORjXwKn/.chmO7s0gXe80JmlJSgUDOii', NULL, NULL, NULL, NULL, NULL, 0, 1, 0, 100, 0, NULL, 1, 0, 3, 1, '2026-08-25 18:24:36'),
-(5, 'Diretora Viridis', 'diretor.viridis', 'diretor@escola.edu.br', '$2y$10$FInAb7Fv1ncs210gAJAInORjXwKn/.chmO7s0gXe80JmlJSgUDOii', NULL, NULL, NULL, NULL, NULL, 0, 1, 0, 100, 0, NULL, 1, 0, 4, 1, '2026-08-25 18:40:26');
+(5, 'Diretora Viridis', 'diretor.viridis', 'diretor@escola.edu.br', '$2y$10$FInAb7Fv1ncs210gAJAInORjXwKn/.chmO7s0gXe80JmlJSgUDOii', NULL, NULL, NULL, NULL, NULL, 0, 1, 0, 100, 0, NULL, 1, 0, 4, 1, '2026-08-25 18:40:26'),
+(9, 'Bruno Alves Costa', 'bruno.alves', 'bruno.alves@escola.edu.br', '$2y$10$FInAb7Fv1ncs210gAJAInORjXwKn/.chmO7s0gXe80JmlJSgUDOii', NULL, NULL, NULL, '7A', 1, 900, 6, 900, 1100, 5, '2026-09-02', 1, 0, 1, 1, '2026-10-28 08:10:20'),
+(10, 'Carla Souza Lima', 'carla.souza', 'carla.souza@escola.edu.br', '$2y$10$FInAb7Fv1ncs210gAJAInORjXwKn/.chmO7s0gXe80JmlJSgUDOii', NULL, NULL, NULL, '7A', 1, 700, 5, 700, 900, 3, '2026-09-01', 1, 0, 1, 1, '2026-10-28 08:10:20'),
+(11, 'Diego Martins', 'diego.martins', 'diego.martins@escola.edu.br', '$2y$10$FInAb7Fv1ncs210gAJAInORjXwKn/.chmO7s0gXe80JmlJSgUDOii', NULL, NULL, NULL, '7B', 2, 450, 3, 450, 600, 2, '2026-08-30', 1, 0, 1, 1, '2026-10-28 08:10:20'),
+(12, 'Felipe Rocha', 'felipe.rocha', 'felipe.rocha@escola.edu.br', '$2y$10$FInAb7Fv1ncs210gAJAInORjXwKn/.chmO7s0gXe80JmlJSgUDOii', NULL, NULL, NULL, '8A', 6, 1100, 7, 1100, 1300, 9, '2026-09-03', 1, 0, 1, 1, '2026-10-28 08:10:20'),
+(13, 'Giovanna Ramos', 'giovanna.ramos', 'giovanna.ramos@escola.edu.br', '$2y$10$FInAb7Fv1ncs210gAJAInORjXwKn/.chmO7s0gXe80JmlJSgUDOii', NULL, NULL, NULL, '8A', 6, 950, 6, 950, 1150, 6, '2026-09-02', 1, 0, 1, 1, '2026-10-28 08:10:20'),
+(14, 'Isabela Nunes', 'isabela.nunes', 'isabela.nunes@colegio.edu.br', '$2y$10$FInAb7Fv1ncs210gAJAInORjXwKn/.chmO7s0gXe80JmlJSgUDOii', NULL, NULL, NULL, '6A', 7, 800, 5, 800, 1000, 4, '2026-09-01', 1, 0, 1, 3, '2026-10-28 08:10:20'),
+(15, 'João Pedro Farias', 'joao.farias', 'joao.farias@colegio.edu.br', '$2y$10$FInAb7Fv1ncs210gAJAInORjXwKn/.chmO7s0gXe80JmlJSgUDOii', NULL, NULL, NULL, '6A', 7, 600, 4, 600, 800, 2, '2026-08-29', 1, 0, 1, 3, '2026-10-28 08:10:20'),
+(16, 'Karina Duarte', 'karina.duarte', 'karina.duarte@colegio.edu.br', '$2y$10$FInAb7Fv1ncs210gAJAInORjXwKn/.chmO7s0gXe80JmlJSgUDOii', NULL, NULL, NULL, '6B', 8, 1000, 6, 1000, 1200, 7, '2026-09-03', 1, 0, 1, 3, '2026-10-28 08:10:20');
 
 -- --------------------------------------------------------
 
 --
--- Estrutura para tabela `usuario_conquista`
+-- Estrutura da tabela `usuario_conquista`
 --
 
 CREATE TABLE `usuario_conquista` (
@@ -613,7 +765,7 @@ CREATE TABLE `usuario_conquista` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Despejando dados para a tabela `usuario_conquista`
+-- Extraindo dados da tabela `usuario_conquista`
 --
 
 INSERT INTO `usuario_conquista` (`usuario_id`, `conquista_id`, `conquistada_em`) VALUES
@@ -622,7 +774,7 @@ INSERT INTO `usuario_conquista` (`usuario_id`, `conquista_id`, `conquistada_em`)
 -- --------------------------------------------------------
 
 --
--- Estrutura para tabela `usuario_licao_progresso`
+-- Estrutura da tabela `usuario_licao_progresso`
 --
 
 CREATE TABLE `usuario_licao_progresso` (
@@ -633,7 +785,7 @@ CREATE TABLE `usuario_licao_progresso` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Despejando dados para a tabela `usuario_licao_progresso`
+-- Extraindo dados da tabela `usuario_licao_progresso`
 --
 
 INSERT INTO `usuario_licao_progresso` (`usuario_id`, `licao_id`, `status`, `concluida_em`) VALUES
@@ -646,17 +798,19 @@ INSERT INTO `usuario_licao_progresso` (`usuario_id`, `licao_id`, `status`, `conc
 --
 
 --
--- Índices de tabela `agenda`
+-- Índices para tabela `agenda`
 --
 ALTER TABLE `agenda`
   ADD PRIMARY KEY (`id`),
   ADD KEY `idx_agenda_aluno_data` (`aluno_id`,`data_hora`),
   ADD KEY `idx_agenda_professor_data` (`professor_id`,`data_hora`),
   ADD KEY `fk_agenda_turma` (`turma_id`),
-  ADD KEY `fk_agenda_missao` (`missao_id`);
+  ADD KEY `fk_agenda_missao` (`missao_id`),
+  ADD KEY `idx_agenda_task_id` (`task_id`),
+  ADD KEY `idx_agenda_missao_publicada` (`missao_publicada_id`,`aluno_id`,`status`);
 
 --
--- Índices de tabela `certificado`
+-- Índices para tabela `certificado`
 --
 ALTER TABLE `certificado`
   ADD PRIMARY KEY (`id`),
@@ -664,14 +818,14 @@ ALTER TABLE `certificado`
   ADD KEY `aluno_id` (`aluno_id`);
 
 --
--- Índices de tabela `conquista`
+-- Índices para tabela `conquista`
 --
 ALTER TABLE `conquista`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `uq_conquista_regra` (`regra`);
 
 --
--- Índices de tabela `convite_professor`
+-- Índices para tabela `convite_professor`
 --
 ALTER TABLE `convite_professor`
   ADD PRIMARY KEY (`id`),
@@ -681,7 +835,7 @@ ALTER TABLE `convite_professor`
   ADD KEY `fk_convite_usuario` (`usuario_criado_id`);
 
 --
--- Índices de tabela `cronograma_aluno`
+-- Índices para tabela `cronograma_aluno`
 --
 ALTER TABLE `cronograma_aluno`
   ADD PRIMARY KEY (`id`),
@@ -689,14 +843,24 @@ ALTER TABLE `cronograma_aluno`
   ADD KEY `missao_id` (`missao_id`);
 
 --
--- Índices de tabela `horta`
+-- Índices para tabela `curso`
+--
+ALTER TABLE `curso`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_curso_publico` (`escopo`,`instituicao_id`,`turma_id`,`publicado`,`ativo`),
+  ADD KEY `fk_curso_instituicao` (`instituicao_id`),
+  ADD KEY `fk_curso_turma` (`turma_id`),
+  ADD KEY `fk_curso_criador` (`criador_id`);
+
+--
+-- Índices para tabela `horta`
 --
 ALTER TABLE `horta`
   ADD PRIMARY KEY (`id`),
   ADD KEY `instituicao_id` (`instituicao_id`);
 
 --
--- Índices de tabela `inspecao_horta`
+-- Índices para tabela `inspecao_horta`
 --
 ALTER TABLE `inspecao_horta`
   ADD PRIMARY KEY (`id`),
@@ -704,34 +868,53 @@ ALTER TABLE `inspecao_horta`
   ADD KEY `responsavel_id` (`responsavel_id`);
 
 --
--- Índices de tabela `instituicao`
+-- Índices para tabela `instituicao`
 --
 ALTER TABLE `instituicao`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `cnpj` (`cnpj`);
 
 --
--- Índices de tabela `curso`
---
-ALTER TABLE `curso`
-  ADD PRIMARY KEY (`id`);
-
---
--- Índices de tabela `licao`
+-- Índices para tabela `licao`
 --
 ALTER TABLE `licao`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `uq_licao_modulo_ordem` (`modulo_id`,`ordem`);
 
 --
--- Índices de tabela `missao`
+-- Índices para tabela `missao`
 --
 ALTER TABLE `missao`
   ADD PRIMARY KEY (`id`),
   ADD KEY `criador_id` (`criador_id`);
 
 --
--- Índices de tabela `modulo`
+-- Índices para tabela `missao_convite`
+--
+ALTER TABLE `missao_convite`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uq_missao_convite` (`missao_publicada_id`,`grupo_id`,`convidado_id`),
+  ADD KEY `idx_missao_convite_usuario` (`convidado_id`,`status`),
+  ADD KEY `fk_missao_convite_convidante` (`convidante_id`);
+
+--
+-- Índices para tabela `missao_pontuacao`
+--
+ALTER TABLE `missao_pontuacao`
+  ADD PRIMARY KEY (`missao_publicada_id`,`grupo_id`,`aluno_id`),
+  ADD KEY `idx_missao_pontuacao_aluno` (`aluno_id`,`criado_em`);
+
+--
+-- Índices para tabela `missao_publicada`
+--
+ALTER TABLE `missao_publicada`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_missao_publicada_turma` (`turma_id`,`ativa`,`criado_em`),
+  ADD KEY `idx_missao_publicada_criador` (`criador_id`,`criado_em`),
+  ADD KEY `fk_missao_publicada_catalogo` (`missao_id`);
+
+--
+-- Índices para tabela `modulo`
 --
 ALTER TABLE `modulo`
   ADD PRIMARY KEY (`id`),
@@ -739,34 +922,34 @@ ALTER TABLE `modulo`
   ADD KEY `idx_modulo_curso` (`curso_id`);
 
 --
--- Índices de tabela `notificacao`
+-- Índices para tabela `notificacao`
 --
 ALTER TABLE `notificacao`
   ADD PRIMARY KEY (`id`),
   ADD KEY `idx_notificacao_usuario_lida` (`usuario_id`,`lida`,`criada_em`);
 
 --
--- Índices de tabela `opcao_quiz`
+-- Índices para tabela `opcao_quiz`
 --
 ALTER TABLE `opcao_quiz`
   ADD PRIMARY KEY (`id`),
   ADD KEY `pergunta_id` (`pergunta_id`);
 
 --
--- Índices de tabela `parceiro`
+-- Índices para tabela `parceiro`
 --
 ALTER TABLE `parceiro`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `uq_parceiro_email` (`email`);
 
 --
--- Índices de tabela `perfil`
+-- Índices para tabela `perfil`
 --
 ALTER TABLE `perfil`
   ADD PRIMARY KEY (`id`);
 
 --
--- Índices de tabela `pergunta_quiz`
+-- Índices para tabela `pergunta_quiz`
 --
 ALTER TABLE `pergunta_quiz`
   ADD PRIMARY KEY (`id`),
@@ -774,7 +957,7 @@ ALTER TABLE `pergunta_quiz`
   ADD KEY `idx_pergunta_licao` (`licao_id`);
 
 --
--- Índices de tabela `progresso_quiz`
+-- Índices para tabela `progresso_quiz`
 --
 ALTER TABLE `progresso_quiz`
   ADD PRIMARY KEY (`id`),
@@ -782,7 +965,7 @@ ALTER TABLE `progresso_quiz`
   ADD KEY `pergunta_id` (`pergunta_id`);
 
 --
--- Índices de tabela `recompensa`
+-- Índices para tabela `recompensa`
 --
 ALTER TABLE `recompensa`
   ADD PRIMARY KEY (`id`),
@@ -791,7 +974,7 @@ ALTER TABLE `recompensa`
   ADD KEY `idx_recompensa_instituicao` (`instituicao_id`);
 
 --
--- Índices de tabela `resgate`
+-- Índices para tabela `resgate`
 --
 ALTER TABLE `resgate`
   ADD PRIMARY KEY (`id`),
@@ -799,17 +982,43 @@ ALTER TABLE `resgate`
   ADD KEY `idx_resgate_recompensa` (`recompensa_id`);
 
 --
--- Índices de tabela `submissao_missao`
+-- Índices para tabela `schema_migration`
+--
+ALTER TABLE `schema_migration`
+  ADD PRIMARY KEY (`nome`);
+
+--
+-- Índices para tabela `submissao_missao`
 --
 ALTER TABLE `submissao_missao`
   ADD PRIMARY KEY (`id`),
   ADD KEY `aluno_id` (`aluno_id`),
   ADD KEY `missao_id` (`missao_id`),
   ADD KEY `idx_submissao_status` (`status`),
-  ADD KEY `idx_submissao_revisor` (`revisado_por`);
+  ADD KEY `idx_submissao_revisor` (`revisado_por`),
+  ADD KEY `idx_submissao_missao_publicada` (`missao_publicada_id`,`aluno_id`,`status`),
+  ADD KEY `idx_submissao_missao_publicada_grupo` (`missao_publicada_id`,`grupo_id`,`status`);
 
 --
--- Índices de tabela `turma_escolar`
+-- Índices para tabela `tarefa_aberta`
+--
+ALTER TABLE `tarefa_aberta`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_tarefa_aberta_turma` (`turma_id`,`ativa`,`criado_em`),
+  ADD KEY `criador_id` (`criador_id`),
+  ADD KEY `missao_id` (`missao_id`);
+
+--
+-- Índices para tabela `tarefa_convite`
+--
+ALTER TABLE `tarefa_convite`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uq_tarefa_convite` (`task_id`,`grupo_id`,`convidado_id`),
+  ADD KEY `idx_tarefa_convite_usuario` (`convidado_id`,`status`),
+  ADD KEY `convidante_id` (`convidante_id`);
+
+--
+-- Índices para tabela `turma_escolar`
 --
 ALTER TABLE `turma_escolar`
   ADD PRIMARY KEY (`id`),
@@ -817,14 +1026,14 @@ ALTER TABLE `turma_escolar`
   ADD UNIQUE KEY `uq_turma_codigo_acesso` (`codigo_acesso`);
 
 --
--- Índices de tabela `turma_professor`
+-- Índices para tabela `turma_professor`
 --
 ALTER TABLE `turma_professor`
   ADD PRIMARY KEY (`turma_id`,`professor_id`),
   ADD KEY `fk_tp_professor` (`professor_id`);
 
 --
--- Índices de tabela `usuario`
+-- Índices para tabela `usuario`
 --
 ALTER TABLE `usuario`
   ADD PRIMARY KEY (`id`),
@@ -838,14 +1047,14 @@ ALTER TABLE `usuario`
   ADD KEY `idx_usuario_turma_id` (`turma_id`);
 
 --
--- Índices de tabela `usuario_conquista`
+-- Índices para tabela `usuario_conquista`
 --
 ALTER TABLE `usuario_conquista`
   ADD PRIMARY KEY (`usuario_id`,`conquista_id`),
   ADD KEY `fk_uc_conquista` (`conquista_id`);
 
 --
--- Índices de tabela `usuario_licao_progresso`
+-- Índices para tabela `usuario_licao_progresso`
 --
 ALTER TABLE `usuario_licao_progresso`
   ADD PRIMARY KEY (`usuario_id`,`licao_id`),
@@ -853,7 +1062,7 @@ ALTER TABLE `usuario_licao_progresso`
   ADD KEY `fk_ulp_licao` (`licao_id`);
 
 --
--- AUTO_INCREMENT para tabelas despejadas
+-- AUTO_INCREMENT de tabelas despejadas
 --
 
 --
@@ -887,6 +1096,12 @@ ALTER TABLE `cronograma_aluno`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
+-- AUTO_INCREMENT de tabela `curso`
+--
+ALTER TABLE `curso`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
 -- AUTO_INCREMENT de tabela `horta`
 --
 ALTER TABLE `horta`
@@ -902,13 +1117,7 @@ ALTER TABLE `inspecao_horta`
 -- AUTO_INCREMENT de tabela `instituicao`
 --
 ALTER TABLE `instituicao`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
-
---
--- AUTO_INCREMENT de tabela `curso`
---
-ALTER TABLE `curso`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT de tabela `licao`
@@ -921,6 +1130,18 @@ ALTER TABLE `licao`
 --
 ALTER TABLE `missao`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+--
+-- AUTO_INCREMENT de tabela `missao_convite`
+--
+ALTER TABLE `missao_convite`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT de tabela `missao_publicada`
+--
+ALTER TABLE `missao_publicada`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT de tabela `modulo`
@@ -983,38 +1204,52 @@ ALTER TABLE `submissao_missao`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
+-- AUTO_INCREMENT de tabela `tarefa_aberta`
+--
+ALTER TABLE `tarefa_aberta`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+
+--
+-- AUTO_INCREMENT de tabela `tarefa_convite`
+--
+ALTER TABLE `tarefa_convite`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT de tabela `turma_escolar`
 --
 ALTER TABLE `turma_escolar`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT de tabela `usuario`
 --
 ALTER TABLE `usuario`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
 
 --
--- Restrições para tabelas despejadas
+-- Restrições para despejos de tabelas
 --
 
 --
--- Restrições para tabelas `agenda`
+-- Limitadores para a tabela `agenda`
 --
 ALTER TABLE `agenda`
   ADD CONSTRAINT `fk_agenda_aluno` FOREIGN KEY (`aluno_id`) REFERENCES `usuario` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `fk_agenda_missao` FOREIGN KEY (`missao_id`) REFERENCES `missao` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `fk_agenda_missao_publicada` FOREIGN KEY (`missao_publicada_id`) REFERENCES `missao_publicada` (`id`) ON DELETE SET NULL,
   ADD CONSTRAINT `fk_agenda_professor` FOREIGN KEY (`professor_id`) REFERENCES `usuario` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_agenda_tarefa_aberta` FOREIGN KEY (`task_id`) REFERENCES `tarefa_aberta` (`id`) ON DELETE SET NULL,
   ADD CONSTRAINT `fk_agenda_turma` FOREIGN KEY (`turma_id`) REFERENCES `turma_escolar` (`id`) ON DELETE SET NULL;
 
 --
--- Restrições para tabelas `certificado`
+-- Limitadores para a tabela `certificado`
 --
 ALTER TABLE `certificado`
   ADD CONSTRAINT `certificado_ibfk_1` FOREIGN KEY (`aluno_id`) REFERENCES `usuario` (`id`);
 
 --
--- Restrições para tabelas `convite_professor`
+-- Limitadores para a tabela `convite_professor`
 --
 ALTER TABLE `convite_professor`
   ADD CONSTRAINT `fk_convite_diretor` FOREIGN KEY (`criado_por`) REFERENCES `usuario` (`id`),
@@ -1022,114 +1257,154 @@ ALTER TABLE `convite_professor`
   ADD CONSTRAINT `fk_convite_usuario` FOREIGN KEY (`usuario_criado_id`) REFERENCES `usuario` (`id`);
 
 --
--- Restrições para tabelas `cronograma_aluno`
+-- Limitadores para a tabela `cronograma_aluno`
 --
 ALTER TABLE `cronograma_aluno`
   ADD CONSTRAINT `cronograma_aluno_ibfk_1` FOREIGN KEY (`aluno_id`) REFERENCES `usuario` (`id`),
   ADD CONSTRAINT `cronograma_aluno_ibfk_2` FOREIGN KEY (`missao_id`) REFERENCES `missao` (`id`);
 
 --
--- Restrições para tabelas `curso`
+-- Limitadores para a tabela `curso`
 --
 ALTER TABLE `curso`
+  ADD CONSTRAINT `fk_curso_criador` FOREIGN KEY (`criador_id`) REFERENCES `usuario` (`id`),
   ADD CONSTRAINT `fk_curso_instituicao` FOREIGN KEY (`instituicao_id`) REFERENCES `instituicao` (`id`),
-  ADD CONSTRAINT `fk_curso_turma` FOREIGN KEY (`turma_id`) REFERENCES `turma_escolar` (`id`),
-  ADD CONSTRAINT `fk_curso_criador` FOREIGN KEY (`criador_id`) REFERENCES `usuario` (`id`);
+  ADD CONSTRAINT `fk_curso_turma` FOREIGN KEY (`turma_id`) REFERENCES `turma_escolar` (`id`);
 
 --
--- Restrições para tabelas `horta`
+-- Limitadores para a tabela `horta`
 --
 ALTER TABLE `horta`
   ADD CONSTRAINT `horta_ibfk_1` FOREIGN KEY (`instituicao_id`) REFERENCES `instituicao` (`id`);
 
 --
--- Restrições para tabelas `inspecao_horta`
+-- Limitadores para a tabela `inspecao_horta`
 --
 ALTER TABLE `inspecao_horta`
   ADD CONSTRAINT `inspecao_horta_ibfk_1` FOREIGN KEY (`horta_id`) REFERENCES `horta` (`id`),
   ADD CONSTRAINT `inspecao_horta_ibfk_2` FOREIGN KEY (`responsavel_id`) REFERENCES `usuario` (`id`);
 
 --
--- Restrições para tabelas `licao`
+-- Limitadores para a tabela `licao`
 --
 ALTER TABLE `licao`
   ADD CONSTRAINT `fk_licao_modulo` FOREIGN KEY (`modulo_id`) REFERENCES `modulo` (`id`) ON DELETE CASCADE;
 
 --
--- Restrições para tabelas `modulo`
---
-ALTER TABLE `modulo`
-  ADD CONSTRAINT `fk_modulo_curso` FOREIGN KEY (`curso_id`) REFERENCES `curso` (`id`);
-
---
--- Restrições para tabelas `missao`
+-- Limitadores para a tabela `missao`
 --
 ALTER TABLE `missao`
   ADD CONSTRAINT `missao_ibfk_1` FOREIGN KEY (`criador_id`) REFERENCES `usuario` (`id`);
 
 --
--- Restrições para tabelas `notificacao`
+-- Limitadores para a tabela `missao_convite`
+--
+ALTER TABLE `missao_convite`
+  ADD CONSTRAINT `fk_missao_convite_convidado` FOREIGN KEY (`convidado_id`) REFERENCES `usuario` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_missao_convite_convidante` FOREIGN KEY (`convidante_id`) REFERENCES `usuario` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_missao_convite_publicada` FOREIGN KEY (`missao_publicada_id`) REFERENCES `missao_publicada` (`id`) ON DELETE CASCADE;
+
+--
+-- Limitadores para a tabela `missao_pontuacao`
+--
+ALTER TABLE `missao_pontuacao`
+  ADD CONSTRAINT `fk_missao_pontuacao_aluno` FOREIGN KEY (`aluno_id`) REFERENCES `usuario` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_missao_pontuacao_publicada` FOREIGN KEY (`missao_publicada_id`) REFERENCES `missao_publicada` (`id`) ON DELETE CASCADE;
+
+--
+-- Limitadores para a tabela `missao_publicada`
+--
+ALTER TABLE `missao_publicada`
+  ADD CONSTRAINT `fk_missao_publicada_catalogo` FOREIGN KEY (`missao_id`) REFERENCES `missao` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `fk_missao_publicada_criador` FOREIGN KEY (`criador_id`) REFERENCES `usuario` (`id`),
+  ADD CONSTRAINT `fk_missao_publicada_turma` FOREIGN KEY (`turma_id`) REFERENCES `turma_escolar` (`id`);
+
+--
+-- Limitadores para a tabela `modulo`
+--
+ALTER TABLE `modulo`
+  ADD CONSTRAINT `fk_modulo_curso` FOREIGN KEY (`curso_id`) REFERENCES `curso` (`id`);
+
+--
+-- Limitadores para a tabela `notificacao`
 --
 ALTER TABLE `notificacao`
   ADD CONSTRAINT `fk_notificacao_usuario` FOREIGN KEY (`usuario_id`) REFERENCES `usuario` (`id`) ON DELETE CASCADE;
 
 --
--- Restrições para tabelas `opcao_quiz`
+-- Limitadores para a tabela `opcao_quiz`
 --
 ALTER TABLE `opcao_quiz`
   ADD CONSTRAINT `opcao_quiz_ibfk_1` FOREIGN KEY (`pergunta_id`) REFERENCES `pergunta_quiz` (`id`) ON DELETE CASCADE;
 
 --
--- Restrições para tabelas `pergunta_quiz`
+-- Limitadores para a tabela `pergunta_quiz`
 --
 ALTER TABLE `pergunta_quiz`
   ADD CONSTRAINT `fk_pergunta_licao` FOREIGN KEY (`licao_id`) REFERENCES `licao` (`id`) ON DELETE SET NULL,
   ADD CONSTRAINT `pergunta_quiz_ibfk_1` FOREIGN KEY (`criador_id`) REFERENCES `usuario` (`id`);
 
 --
--- Restrições para tabelas `progresso_quiz`
+-- Limitadores para a tabela `progresso_quiz`
 --
 ALTER TABLE `progresso_quiz`
   ADD CONSTRAINT `progresso_quiz_ibfk_1` FOREIGN KEY (`aluno_id`) REFERENCES `usuario` (`id`),
   ADD CONSTRAINT `progresso_quiz_ibfk_2` FOREIGN KEY (`pergunta_id`) REFERENCES `pergunta_quiz` (`id`);
 
 --
--- Restrições para tabelas `recompensa`
+-- Limitadores para a tabela `recompensa`
 --
 ALTER TABLE `recompensa`
   ADD CONSTRAINT `fk_recompensa_instituicao` FOREIGN KEY (`instituicao_id`) REFERENCES `instituicao` (`id`),
   ADD CONSTRAINT `fk_recompensa_parceiro` FOREIGN KEY (`parceiro_id`) REFERENCES `parceiro` (`id`) ON DELETE SET NULL;
 
 --
--- Restrições para tabelas `resgate`
+-- Limitadores para a tabela `resgate`
 --
 ALTER TABLE `resgate`
   ADD CONSTRAINT `fk_resgate_recompensa` FOREIGN KEY (`recompensa_id`) REFERENCES `recompensa` (`id`),
   ADD CONSTRAINT `fk_resgate_usuario` FOREIGN KEY (`usuario_id`) REFERENCES `usuario` (`id`);
 
 --
--- Restrições para tabelas `submissao_missao`
+-- Limitadores para a tabela `submissao_missao`
 --
 ALTER TABLE `submissao_missao`
+  ADD CONSTRAINT `fk_submissao_missao_publicada` FOREIGN KEY (`missao_publicada_id`) REFERENCES `missao_publicada` (`id`) ON DELETE SET NULL,
   ADD CONSTRAINT `fk_submissao_revisor` FOREIGN KEY (`revisado_por`) REFERENCES `usuario` (`id`),
   ADD CONSTRAINT `submissao_missao_ibfk_1` FOREIGN KEY (`aluno_id`) REFERENCES `usuario` (`id`),
   ADD CONSTRAINT `submissao_missao_ibfk_2` FOREIGN KEY (`missao_id`) REFERENCES `missao` (`id`);
 
 --
--- Restrições para tabelas `turma_escolar`
+-- Limitadores para a tabela `tarefa_aberta`
+--
+ALTER TABLE `tarefa_aberta`
+  ADD CONSTRAINT `tarefa_aberta_ibfk_1` FOREIGN KEY (`turma_id`) REFERENCES `turma_escolar` (`id`),
+  ADD CONSTRAINT `tarefa_aberta_ibfk_2` FOREIGN KEY (`criador_id`) REFERENCES `usuario` (`id`),
+  ADD CONSTRAINT `tarefa_aberta_ibfk_3` FOREIGN KEY (`missao_id`) REFERENCES `missao` (`id`);
+
+--
+-- Limitadores para a tabela `tarefa_convite`
+--
+ALTER TABLE `tarefa_convite`
+  ADD CONSTRAINT `tarefa_convite_ibfk_1` FOREIGN KEY (`task_id`) REFERENCES `tarefa_aberta` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `tarefa_convite_ibfk_2` FOREIGN KEY (`convidado_id`) REFERENCES `usuario` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `tarefa_convite_ibfk_3` FOREIGN KEY (`convidante_id`) REFERENCES `usuario` (`id`) ON DELETE CASCADE;
+
+--
+-- Limitadores para a tabela `turma_escolar`
 --
 ALTER TABLE `turma_escolar`
   ADD CONSTRAINT `fk_turma_instituicao` FOREIGN KEY (`instituicao_id`) REFERENCES `instituicao` (`id`);
 
 --
--- Restrições para tabelas `turma_professor`
+-- Limitadores para a tabela `turma_professor`
 --
 ALTER TABLE `turma_professor`
   ADD CONSTRAINT `fk_tp_professor` FOREIGN KEY (`professor_id`) REFERENCES `usuario` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `fk_tp_turma` FOREIGN KEY (`turma_id`) REFERENCES `turma_escolar` (`id`) ON DELETE CASCADE;
 
 --
--- Restrições para tabelas `usuario`
+-- Limitadores para a tabela `usuario`
 --
 ALTER TABLE `usuario`
   ADD CONSTRAINT `fk_usuario_turma` FOREIGN KEY (`turma_id`) REFERENCES `turma_escolar` (`id`) ON DELETE SET NULL,
@@ -1137,14 +1412,14 @@ ALTER TABLE `usuario`
   ADD CONSTRAINT `usuario_ibfk_2` FOREIGN KEY (`instituicao_id`) REFERENCES `instituicao` (`id`);
 
 --
--- Restrições para tabelas `usuario_conquista`
+-- Limitadores para a tabela `usuario_conquista`
 --
 ALTER TABLE `usuario_conquista`
   ADD CONSTRAINT `fk_uc_conquista` FOREIGN KEY (`conquista_id`) REFERENCES `conquista` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `fk_uc_usuario` FOREIGN KEY (`usuario_id`) REFERENCES `usuario` (`id`) ON DELETE CASCADE;
 
 --
--- Restrições para tabelas `usuario_licao_progresso`
+-- Limitadores para a tabela `usuario_licao_progresso`
 --
 ALTER TABLE `usuario_licao_progresso`
   ADD CONSTRAINT `fk_ulp_licao` FOREIGN KEY (`licao_id`) REFERENCES `licao` (`id`) ON DELETE CASCADE,
