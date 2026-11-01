@@ -9,7 +9,7 @@
 | `compost` | 75 | +2 kg de resíduos reciclados e +0,5 kg de CO₂ reduzido |
 | `share` | 25 | contabilizado como engajamento |
 
-Os pontos de missão só entram no saldo quando uma submissão `pending` muda para `approved`. A revisão bloqueia a submissão em transação, impedindo crédito duplicado.
+Os pontos de missão só entram no saldo quando uma submissão `pending` muda para `approved`. Em missões de equipe, cada integrante do turno recebe os pontos da missão (uma única vez por turno), e o impacto no jardim também conta para todos. Os pontos vêm da missão publicada pelo professor; a tabela acima traz apenas os valores sugeridos por tipo. A revisão bloqueia a submissão em transação, impedindo crédito duplicado.
 
 ## Quiz, XP e nível
 

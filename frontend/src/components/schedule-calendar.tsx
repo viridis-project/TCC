@@ -16,7 +16,6 @@ import { ptBR } from "date-fns/locale";
 import {
   CalendarDays,
   CalendarRange,
-  Check,
   ChevronLeft,
   ChevronRight,
   Clock3,
@@ -24,22 +23,45 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSearch } from "@tanstack/react-router";
+import { backendAsset, missionTypes, type MissionType, type SubmissionStatus } from "@/lib/api";
 
 export type ScheduleCalendarItem = {
   id: number;
-  missao_publicada_id?: number | null;
-  grupo_id?: string | null;
+  missao_id: number | null;
+  grupo_id: string | null;
   titulo: string;
   data_hora: string;
-  status: "agendado" | "concluido" | "cancelado" | "nao_realizada";
-  missao: string | null;
+  status: "agendado" | "em_analise" | "concluido" | "cancelado" | "nao_realizada";
   descricao?: string | null;
+  imagem?: string | null;
+  tipo?: MissionType | null;
+  pontos?: number | null;
   turma?: string;
   aluno?: string;
-  resultados?: string | null;
+  participantes?: number;
+  /** Só na agenda do aluno: o aluno logado faz parte deste turno. */
+  minha?: number;
+  envio_descricao?: string | null;
+  envio_foto?: string | null;
+  envio_status?: SubmissionStatus | null;
+  envio_comentario?: string | null;
 };
 
 type GroupedItem = ScheduleCalendarItem & { ids: number[]; alunos: string[]; date: Date };
+const statusLabel = {
+  agendado: "Agendada",
+  em_analise: "Em análise",
+  concluido: "Concluída",
+  cancelado: "Cancelada",
+  nao_realizada: "Não realizada",
+} as const;
+/** Itens cancelados não têm detalhes; todos os demais abrem o painel da missão. */
+const hasDetails = (item: GroupedItem) => item.status !== "cancelado";
+const canSubmitProof = (item: GroupedItem) =>
+  Boolean(item.minha) &&
+  (item.status === "agendado" || item.status === "nao_realizada") &&
+  item.envio_status !== "pending" &&
+  item.envio_status !== "approved";
 type ViewMode = "week" | "month";
 
 function parseDate(raw: string): Date {
@@ -53,17 +75,15 @@ function groupItems(items: ScheduleCalendarItem[]): GroupedItem[] {
       item.titulo,
       item.data_hora,
       item.status,
-      item.missao_publicada_id ?? "",
+      item.missao_id ?? "",
       item.grupo_id ?? item.id,
       item.turma ?? "",
-      item.missao ?? "",
     ].join("|");
     const current = groups.get(key);
     if (current) {
       current.ids.push(item.id);
       if (item.aluno && !current.alunos.includes(item.aluno)) current.alunos.push(item.aluno);
-      if (item.resultados)
-        current.resultados = [current.resultados, item.resultados].filter(Boolean).join("\n\n");
+      if (item.minha) current.minha = 1;
       return;
     }
     groups.set(key, {
@@ -81,6 +101,7 @@ const statusClass = {
   concluido: "border-success/30 bg-success/10 text-foreground",
   cancelado: "border-destructive/30 bg-destructive/5 text-muted-foreground",
   nao_realizada: "border-amber-500/40 bg-amber-500/10 text-amber-900 dark:text-amber-200",
+  em_analise: "border-info/40 bg-info/10 text-foreground",
 } as const;
 
 export function ScheduleCalendar({
@@ -88,11 +109,14 @@ export function ScheduleCalendar({
   professor,
   updating,
   onStatus,
+  onSubmitProof,
 }: {
   items: ScheduleCalendarItem[];
   professor: boolean;
   updating: boolean;
-  onStatus: (ids: number[], value: "concluido" | "cancelado") => void;
+  onStatus: (ids: number[], value: "cancelado") => void;
+  /** Só o aluno envia comprovação; quando ausente, o botão não aparece. */
+  onSubmitProof?: (item: ScheduleCalendarItem) => void;
 }) {
   const [view, setView] = useState<ViewMode>("week");
   const [anchor, setAnchor] = useState(() => new Date());
@@ -104,6 +128,7 @@ export function ScheduleCalendar({
   }, [search.data]);
   const grouped = useMemo(() => groupItems(items), [items]);
   const [resultItem, setResultItem] = useState<GroupedItem | null>(null);
+  const proofHandler = onSubmitProof;
   const weekStart = startOfWeek(anchor, { weekStartsOn: 1 });
   const weekEnd = endOfWeek(anchor, { weekStartsOn: 1 });
   const periodLabel =
@@ -144,11 +169,7 @@ export function ScheduleCalendar({
                 const params = new URLSearchParams(window.location.search);
                 params.delete("data");
                 const query = params.toString();
-                window.history.replaceState(
-                  null,
-                  "",
-                  `${window.location.pathname}${query ? `?${query}` : ""}`,
-                );
+                window.history.replaceState(null, "", `${window.location.pathname}${query ? `?${query}` : ""}`);
               }
             }}
             className="min-h-11 rounded-lg px-3 text-sm font-bold text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -199,51 +220,64 @@ export function ScheduleCalendar({
           <section
             role="dialog"
             aria-modal="true"
-            className="w-full max-w-lg rounded-2xl bg-card p-6 shadow-xl"
+            aria-label={resultItem.titulo}
+            className="max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto rounded-2xl bg-card p-6 shadow-xl"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h2 className="text-lg font-bold">{resultItem.titulo}</h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {format(resultItem.date, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })} ·{" "}
-                  {resultItem.status === "nao_realizada" ? "Não realizada" : "Concluída"}
+                  {format(resultItem.date, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })} · {statusLabel[resultItem.status]}
+                  {resultItem.tipo ? ` · ${missionTypes[resultItem.tipo].label}` : ""}
+                  {resultItem.pontos ? ` · ${resultItem.pontos} pts` : ""}
                 </p>
               </div>
-              <button
-                className="rounded-md border px-3 py-2 text-sm"
-                onClick={() => setResultItem(null)}
-              >
+              <button className="rounded-md border px-3 py-2 text-sm" onClick={() => setResultItem(null)}>
                 Fechar
               </button>
             </div>
             <div className="mt-4 space-y-4">
-              <div>
-                <h3 className="text-xs font-bold uppercase text-muted-foreground">Participantes</h3>
-                <p className="mt-1 text-sm">
-                  {resultItem.alunos.join(", ") || "Nenhum aluno registrado"}
-                </p>
-              </div>
+              {resultItem.imagem && (
+                <img src={backendAsset(resultItem.imagem)} alt="" className="max-h-48 w-full rounded-lg object-cover" />
+              )}
               {resultItem.descricao && (
                 <div>
                   <h3 className="text-xs font-bold uppercase text-muted-foreground">Descrição</h3>
                   <p className="mt-1 whitespace-pre-wrap text-sm">{resultItem.descricao}</p>
                 </div>
               )}
-              {resultItem.missao && (
-                <p className="text-sm">
-                  <strong>Atividade:</strong> {resultItem.missao}
-                </p>
-              )}
-              {resultItem.resultados && (
-                <div>
+              <div>
+                <h3 className="text-xs font-bold uppercase text-muted-foreground">Participantes</h3>
+                <p className="mt-1 text-sm">{resultItem.alunos.join(", ") || "Nenhum aluno registrado"}</p>
+              </div>
+              {resultItem.envio_status && (
+                <div className="space-y-2">
                   <h3 className="text-xs font-bold uppercase text-muted-foreground">
-                    Resultados enviados
+                    Comprovação enviada ·{" "}
+                    {resultItem.envio_status === "pending" ? "em análise" : resultItem.envio_status === "approved" ? "aprovada" : "rejeitada"}
                   </h3>
-                  <pre className="mt-1 whitespace-pre-wrap rounded-lg bg-muted p-4 text-sm">
-                    {resultItem.resultados}
-                  </pre>
+                  {resultItem.envio_foto && (
+                    <img src={backendAsset(resultItem.envio_foto)} alt="Comprovação" className="max-h-60 w-full rounded-lg object-contain" />
+                  )}
+                  {resultItem.envio_descricao && (
+                    <p className="whitespace-pre-wrap rounded-lg bg-muted p-3 text-sm">{resultItem.envio_descricao}</p>
+                  )}
+                  {resultItem.envio_comentario && (
+                    <p className="text-sm text-muted-foreground">Professor: {resultItem.envio_comentario}</p>
+                  )}
                 </div>
+              )}
+              {proofHandler && canSubmitProof(resultItem) && (
+                <button
+                  className="min-h-11 w-full rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-foreground"
+                  onClick={() => {
+                    proofHandler(resultItem);
+                    setResultItem(null);
+                  }}
+                >
+                  {resultItem.envio_status === "rejected" ? "Reenviar comprovação" : "Enviar comprovação"}
+                </button>
               )}
             </div>
           </section>
@@ -289,7 +323,7 @@ function WeekView({
   items: GroupedItem[];
   professor: boolean;
   updating: boolean;
-  onStatus: (ids: number[], value: "concluido" | "cancelado") => void;
+  onStatus: (ids: number[], value: "cancelado") => void;
   onResults: (item: GroupedItem) => void;
 }) {
   const weekStart = startOfWeek(anchor, { weekStartsOn: 1 });
@@ -385,28 +419,22 @@ function WeekEvent({
   item: GroupedItem;
   professor: boolean;
   updating: boolean;
-  onStatus: (ids: number[], value: "concluido" | "cancelado") => void;
+  onStatus: (ids: number[], value: "cancelado") => void;
   onResults: (item: GroupedItem) => void;
 }) {
   return (
     <article
       className={cn(
         "flex h-[calc(100%-1.25rem)] min-h-0 flex-col overflow-hidden rounded-lg border p-2 text-xs",
-        (item.status === "concluido" || item.status === "nao_realizada") &&
-          "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        hasDetails(item) && "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         statusClass[item.status],
       )}
       title={`${item.titulo} — ${format(item.date, "HH:mm")}`}
-      onClick={() =>
-        (item.status === "concluido" || item.status === "nao_realizada") && onResults(item)
-      }
-      role={item.status === "concluido" || item.status === "nao_realizada" ? "button" : undefined}
-      tabIndex={item.status === "concluido" || item.status === "nao_realizada" ? 0 : undefined}
+      onClick={() => hasDetails(item) && onResults(item)}
+      role={hasDetails(item) ? "button" : undefined}
+      tabIndex={hasDetails(item) ? 0 : undefined}
       onKeyDown={(event) => {
-        if (
-          (item.status === "concluido" || item.status === "nao_realizada") &&
-          (event.key === "Enter" || event.key === " ")
-        ) {
+        if (hasDetails(item) && event.target === event.currentTarget && (event.key === "Enter" || event.key === " ")) {
           event.preventDefault();
           onResults(item);
         }
@@ -419,30 +447,16 @@ function WeekEvent({
         {item.alunos.length ? `Com ${item.alunos.join(", ")}` : "Sem alunos"}
       </div>
       <div className="mt-auto flex items-end justify-between gap-1">
-        <span className="truncate text-[10px] text-muted-foreground">
-          {item.status === "nao_realizada"
-            ? "Não realizada"
-            : item.status === "concluido"
-              ? "Concluída"
-              : item.status === "cancelado"
-                ? "Cancelada"
-                : "Agendada"}
-        </span>
+        <span className="truncate text-[10px] text-muted-foreground">{statusLabel[item.status]}</span>
         {professor && item.status === "agendado" && (
           <span className="flex shrink-0 gap-1">
             <button
               type="button"
               disabled={updating}
-              onClick={() => onStatus(item.ids, "concluido")}
-              className="grid h-9 w-9 place-items-center rounded-md bg-success text-success-foreground disabled:opacity-50"
-              aria-label={`Concluir ${item.titulo}`}
-            >
-              <Check className="h-3.5 w-3.5" aria-hidden="true" />
-            </button>
-            <button
-              type="button"
-              disabled={updating}
-              onClick={() => onStatus(item.ids, "cancelado")}
+              onClick={(event) => {
+                event.stopPropagation();
+                onStatus(item.ids, "cancelado");
+              }}
               className="grid h-9 w-9 place-items-center rounded-md bg-destructive text-destructive-foreground disabled:opacity-50"
               aria-label={`Cancelar ${item.titulo}`}
             >
@@ -455,15 +469,7 @@ function WeekEvent({
   );
 }
 
-function MonthView({
-  anchor,
-  items,
-  onResults,
-}: {
-  anchor: Date;
-  items: GroupedItem[];
-  onResults: (item: GroupedItem) => void;
-}) {
+function MonthView({ anchor, items, onResults }: { anchor: Date; items: GroupedItem[]; onResults: (item: GroupedItem) => void }) {
   const monthStart = startOfMonth(anchor);
   const monthEnd = endOfMonth(anchor);
   const calendarStart = startOfWeek(monthStart, { weekStartsOn: 1 });
@@ -516,11 +522,8 @@ function MonthView({
                     <button
                       key={item.ids.join("-")}
                       type="button"
-                      onClick={() =>
-                        (item.status === "concluido" || item.status === "nao_realizada") &&
-                        onResults(item)
-                      }
-                      disabled={item.status !== "concluido" && item.status !== "nao_realizada"}
+                      onClick={() => hasDetails(item) && onResults(item)}
+                      disabled={!hasDetails(item)}
                       className={cn(
                         "flex min-w-0 items-center gap-1 rounded-md border px-1.5 py-1 text-[10px]",
                         statusClass[item.status],

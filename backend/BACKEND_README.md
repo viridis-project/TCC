@@ -49,10 +49,17 @@ fetch("http://localhost:8081/api/perfil", { credentials: "include" })
 | `GET /api/modulos` | autenticado | módulos, lições, status e progresso |
 | `GET /api/licoes/{id}/quiz` | autenticado | perguntas/opções sem `is_correta` |
 | `POST /api/licoes/{id}/quiz/submeter` | aluno | `{respostas:[{pergunta_id,opcao_id}]}` |
-| `GET /api/missoes` | autenticado | quatro atividades padrão |
-| `POST /api/submissoes` | aluno | multipart: `missao_id`, `descricao`, `foto` |
+| `GET /api/missoes` | aluno | missões publicadas para a turma: disponíveis, minhas e convites pendentes |
+| `POST /api/missoes` | professor/admin | publica missão: `turma_id`, `titulo`, `descricao?`, `tipo`, `pontos`, `max_alunos`, `foto?` (JSON ou multipart) |
+| `PUT /api/missoes/{id}` | professor/admin | `{ativa}`: encerra ou reabre a missão (só impede novas reservas) |
+| `POST /api/missoes/{id}/aceitar` | aluno | `{data_hora, modo_participacao?}`: reserva o turno. `modo_participacao` (`aberto`\|`particular`) só vale se `max_alunos > 1` |
+| `POST /api/missoes/{id}/entrar` | aluno | `{grupo_id}`: entra no turno de uma missão em equipe com participação aberta |
+| `GET /api/missoes/{id}/alunos?grupo_id=` | aluno | colegas que ainda podem ser convidados |
+| `POST /api/missoes/{id}/convidar` | aluno | `{grupo_id, aluno_id}`: convite (equipe com participação por convite) |
+| `POST /api/convites-missao/{id}/responder` | aluno | `{aceitar}` |
+| `POST /api/submissoes` | aluno | multipart: `missao_id`, `descricao`, `foto`; exige turno reservado; um envio por turno |
 | `GET /api/submissoes?status=pending` | professor/admin | fila por status |
-| `PUT /api/submissoes/{id}/revisar` | professor/admin | `{status, comentario?}` |
+| `PUT /api/submissoes/{id}/revisar` | professor/admin | `{status, comentario?}`; aprovar credita **cada integrante** do turno e conclui o turno |
 | `GET /api/recompensas` | autenticado | recompensas ativas |
 | `POST /api/resgates` | aluno | `{recompensa_id}`; débito atômico |
 | `GET/POST /api/parceiros` | admin | lista/cria parceiro |
@@ -67,11 +74,9 @@ fetch("http://localhost:8081/api/perfil", { credentials: "include" })
 | `GET /api/notificacoes/contagem-nao-lidas` | autenticado | total não lido para polling |
 | `PUT /api/notificacoes/{id}/marcar-lida` | autenticado | marca uma notificação própria |
 | `PUT /api/notificacoes/marcar-todas-lidas` | autenticado | marca todas como lidas |
-| `GET /api/agenda/aluno` | aluno | agenda pessoal |
-| `GET /api/agenda/professor` | professor/admin | agenda consolidada e turmas disponíveis |
-| `POST /api/missoes-publicadas` | professor/admin | publica missão para uma turma; a adesão e o horário são escolhidos pelo aluno |
-| `POST /api/agenda` | professor/admin | alias legado para publicação de missão |
-| `PUT /api/agenda/{id}/status` | professor/admin | conclui ou cancela uma participação em missão |
+| `GET /api/agenda/aluno` | aluno | turnos de missão da turma |
+| `GET /api/agenda/professor` | professor/admin | turnos das turmas e turmas disponíveis |
+| `PUT /api/agenda/{id}/status` | professor/admin | `{status:"cancelado"}` cancela o turno; a conclusão é feita aprovando a comprovação |
 | `GET/POST /api/admin/quiz/perguntas` | admin | lista/cria perguntas e opções |
 | `PUT/DELETE /api/admin/quiz/perguntas/{id}` | admin | edita/exclui pergunta |
 | `GET /api/diretor/dashboard` | diretor | indicadores da escola |
@@ -90,10 +95,6 @@ fetch("http://localhost:8081/api/perfil", { credentials: "include" })
 | `GET/POST/PUT/DELETE /api/diretor/recompensas[/{id}]` | diretor | catálogo escolar da instituição |
 
 Erros usam JSON como `{ "erro": "Pontos insuficientes" }` e status adequados. Conflitos de unicidade usam 409; validações usam 422; métodos inválidos usam 405 adicionalmente aos códigos solicitados.
-
-## Mecânica unificada de missões
-
-O modelo de publicação, migração de Tasks, convites, comprovações e pontuação está documentado em [`MISSOES_UNIFICADAS.md`](MISSOES_UNIFICADAS.md). A migração `20261028_published_missions.php` preserva o histórico; faça backup e confira o registro de migrações antes de executá-la em banco existente.
 
 ## Integração com o frontend
 
@@ -125,3 +126,9 @@ Convites de professor expiram em sete dias e só podem ser utilizados uma vez. O
 - Upload limitado a 5 MB e validado por MIME real; nomes aleatórios.
 - Aprovação e resgate usam transações e bloqueios pessimistas.
 - Em produção: `APP_DEBUG=false`, HTTPS, segredo forte, origem exata e diretório de uploads sem execução de PHP.
+
+## Missões (mecânica única)
+
+Existe apenas a **missão**. O professor publica (título, descrição, imagem opcional, tipo, pontos, `max_alunos`) para uma turma, **sem definir quem faz nem quando**. A missão fica disponível; um aluno a pega e reserva um turno (data/hora), que aparece no calendário. Missões com `max_alunos > 1` aceitam equipe (participação aberta ou por convite); missões individuais não têm essa escolha. A conclusão acontece pelo envio de comprovação (foto + descrição) e aprovação do professor: os pontos vão para cada integrante do turno, uma única vez. As missões padrão antigas (sem turma) ficam inativas e servem apenas ao histórico.
+
+A migration `20261025_unify_missions_tasks.php` converte as antigas tarefas abertas em missões (preservando turnos, equipes, convites e conclusões) e remove `tarefa_aberta`, `tarefa_convite` e `agenda.task_id`. Rode `php migrate.php`.

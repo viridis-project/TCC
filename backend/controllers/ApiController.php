@@ -8,7 +8,6 @@ use DateTimeImmutable;
 use PDO;
 use Throwable;
 use Viridis\middleware\AuthMiddleware;
-use Viridis\models\Missao;
 use Viridis\models\Usuario;
 use Viridis\services\LearningAccess;
 use Viridis\services\LearningException;
@@ -130,82 +129,72 @@ final class ApiController extends Controller
         }
     }
 
-    public function missoes(): never
-    {
-        $this->auth->user();
-        $this->json(['missoes'=>(new Missao($this->db))->all()]);
-    }
-
+    /**
+     * Comprovação de uma missão (foto + descrição). Pertence à equipe que reservou o turno:
+     * qualquer integrante pode enviar, e só pode haver um envio em análise ou aprovado por turno.
+     */
     public function createSubmission(): never
     {
         $user = $this->auth->user(['aluno']);
-        $publishedId = (int)($_POST['missao_publicada_id'] ?? 0) ?: null;
-        $missionId = (int)($_POST['missao_id'] ?? 0) ?: null;
+        $missionId = (int)($_POST['missao_id'] ?? 0);
         $description = trim((string)($_POST['descricao'] ?? ''));
         if (mb_strlen($description) < 5) $this->json(['erro'=>'Descreva sua atividade com pelo menos 5 caracteres'],422);
+        if (mb_strlen($description) > 280) $this->json(['erro'=>'A descrição deve ter no máximo 280 caracteres'],422);
         if (!isset($_FILES['foto']) || $_FILES['foto']['error'] !== UPLOAD_ERR_OK) $this->json(['erro'=>'Envie uma foto da atividade'],422);
         $file = $_FILES['foto'];
         if ((int)$file['size'] > $this->config['upload_max_bytes']) $this->json(['erro'=>'A foto deve ter no máximo 5 MB'],422);
         $mime = (new \finfo(FILEINFO_MIME_TYPE))->file($file['tmp_name']);
         $extensions = ['image/jpeg'=>'jpg','image/png'=>'png','image/webp'=>'webp'];
         if (!isset($extensions[$mime])) $this->json(['erro'=>'Use uma foto JPG, PNG ou WebP'],422);
-
-        $published = null;
-        $publishedGroupId = null;
-        if ($publishedId !== null) {
-            $publishedStmt = $this->db->prepare("SELECT * FROM missao_publicada WHERE id=? AND turma_id=?");
-            $publishedStmt->execute([$publishedId, (int)($user['turma_id'] ?? 0)]);
-            $published = $publishedStmt->fetch();
-            if (!$published) $this->json(['erro'=>'Missão não encontrada, encerrada ou de outra turma'],404);
-            $participation = $this->db->prepare("SELECT grupo_id FROM agenda WHERE missao_publicada_id=? AND aluno_id=? AND status<>'cancelado' ORDER BY id DESC LIMIT 1");
-            $participation->execute([$publishedId,(int)$user['id']]);
-            $participationGroup = $participation->fetchColumn();
-            if ($participationGroup === false) $this->json(['erro'=>'Você precisa aderir à missão antes de enviar a comprovação'],403);
-            $publishedGroupId = $participationGroup === null ? null : (string)$participationGroup;
-            $existingProof = $this->db->prepare("SELECT status FROM submissao_missao WHERE missao_publicada_id=? AND (status='approved' OR (status='pending' AND ((? IS NOT NULL AND grupo_id=?) OR (? IS NULL AND aluno_id=?)))) ORDER BY id DESC LIMIT 1");
-            $existingProof->execute([$publishedId,$publishedGroupId,$publishedGroupId,$publishedGroupId,(int)$user['id']]);
-            $proofStatus = $existingProof->fetchColumn();
-            if ($proofStatus === 'approved') $this->json(['erro'=>'Esta missão já foi aprovada e não aceita novas comprovações'],409);
-            if ($proofStatus === 'pending') $this->json(['erro'=>'Já existe uma comprovação desta equipe em avaliação'],409);
-            if ($missionId === null && !empty($published['missao_id'])) $missionId = (int)$published['missao_id'];
-            if ($missionId === null) {
-                $fallback = $this->db->prepare('SELECT id FROM missao WHERE tipo=? ORDER BY id LIMIT 1');
-                $fallback->execute([(string)$published['tipo']]);
-                $missionId = (int)($fallback->fetchColumn() ?: 0) ?: null;
-                if ($missionId === null) {
-                    $fallbackAny = $this->db->query('SELECT id FROM missao ORDER BY id LIMIT 1');
-                    $missionId = (int)($fallbackAny->fetchColumn() ?: 0) ?: null;
-                }
-            }
+        $saved = null;
+        try {
+            $this->db->beginTransaction();
+            $mission = $this->db->prepare('SELECT id,turma_id FROM missao WHERE id=? FOR UPDATE');
+            $mission->execute([$missionId]);
+            $row = $mission->fetch();
+            if (!$row || (int)$row['turma_id'] !== (int)($user['turma_id'] ?? 0)) { $this->db->rollBack(); $this->json(['erro'=>'Missão não encontrada'],404); }
+            $turn = $this->db->prepare("SELECT grupo_id FROM agenda WHERE missao_id=? AND aluno_id=? AND status='agendado' ORDER BY id DESC LIMIT 1");
+            $turn->execute([$missionId,(int)$user['id']]);
+            $groupId = $turn->fetchColumn();
+            if (!$groupId) { $this->db->rollBack(); $this->json(['erro'=>'Reserve um turno desta missão antes de enviar a comprovação'],403); }
+            $done = $this->db->prepare("SELECT 1 FROM agenda WHERE missao_id=? AND status='concluido' LIMIT 1");
+            $done->execute([$missionId]);
+            if ($done->fetchColumn()) { $this->db->rollBack(); $this->json(['erro'=>'Esta missão já foi concluída'],409); }
+            $duplicate = $this->db->prepare("SELECT 1 FROM submissao_missao WHERE missao_id=? AND grupo_id=? AND status IN ('pending','approved') LIMIT 1");
+            $duplicate->execute([$missionId,$groupId]);
+            if ($duplicate->fetchColumn()) { $this->db->rollBack(); $this->json(['erro'=>'Sua equipe já enviou a comprovação desta missão'],409); }
+            if (!is_dir($this->config['upload_dir'])) mkdir($this->config['upload_dir'],0750,true);
+            $name = bin2hex(random_bytes(16)).'.'.$extensions[$mime];
+            if (!move_uploaded_file($file['tmp_name'],$this->config['upload_dir'].'/'.$name)) { $this->db->rollBack(); $this->json(['erro'=>'Não foi possível salvar a foto'],500); }
+            $saved = $this->config['upload_dir'].'/'.$name;
+            $stmt = $this->db->prepare("INSERT INTO submissao_missao (aluno_id,missao_id,grupo_id,descricao,url_foto,status) VALUES (?,?,?,?,?,'pending')");
+            $stmt->execute([(int)$user['id'],$missionId,$groupId,$description,'/uploads/'.$name]);
+            $id = (int)$this->db->lastInsertId();
+            $this->db->commit();
+            $this->json(['mensagem'=>'Comprovação enviada para verificação','id'=>$id],201);
+        } catch (Throwable $e) {
+            if ($this->db->inTransaction()) $this->db->rollBack();
+            if ($saved !== null && is_file($saved)) unlink($saved);
+            throw $e;
         }
-        if ($missionId === null) $this->json(['erro'=>'Não há uma atividade-base compatível para registrar esta comprovação'],422);
-        $mission = $this->db->prepare('SELECT id FROM missao WHERE id=?');
-        $mission->execute([$missionId]);
-        if (!$mission->fetchColumn()) $this->json(['erro'=>'Atividade não encontrada'],404);
-
-        if (!is_dir($this->config['upload_dir']) && !mkdir($this->config['upload_dir'],0750,true) && !is_dir($this->config['upload_dir'])) {
-            $this->json(['erro'=>'Não foi possível preparar o diretório de uploads'],500);
-        }
-        $name = bin2hex(random_bytes(16)).'.'.$extensions[$mime];
-        if (!move_uploaded_file($file['tmp_name'],$this->config['upload_dir'].'/'.$name)) $this->json(['erro'=>'Não foi possível salvar a foto'],500);
-        $stmt = $this->db->prepare("INSERT INTO submissao_missao (aluno_id,missao_id,missao_publicada_id,grupo_id,descricao,url_foto,status) VALUES (?,?,?,?,?,?,'pending')");
-        $stmt->execute([(int)$user['id'],$missionId,$publishedId,$publishedGroupId,$description,'/uploads/'.$name]);
-        $this->json(['mensagem'=>'Comprovação enviada para avaliação','id'=>(int)$this->db->lastInsertId()],201);
     }
 
     public function history(): never
     {
         $user = $this->auth->user();
         $userId = (int)$user['id'];
-        $plants = $this->db->prepare(
+        // Envios feitos pelo aluno ou por alguém da equipe dele na mesma missão.
+        $submissions = $this->db->prepare(
             "SELECT s.id,s.descricao,s.url_foto,s.status,s.comentario_professor,
-                    s.data_envio,s.revisado_em,COALESCE(mp.titulo,m.titulo) titulo
+                    s.data_envio,s.revisado_em,m.titulo,m.tipo,
+                    (SELECT GROUP_CONCAT(DISTINCT mu.nome ORDER BY mu.nome SEPARATOR ', ') FROM agenda a JOIN usuario mu ON mu.id=a.aluno_id
+                     WHERE a.missao_id=s.missao_id AND a.grupo_id=s.grupo_id AND a.status<>'cancelado') equipe
              FROM submissao_missao s JOIN missao m ON m.id=s.missao_id
-             LEFT JOIN missao_publicada mp ON mp.id=s.missao_publicada_id
-             WHERE s.aluno_id=? AND (m.tipo='plant' OR s.missao_publicada_id IS NOT NULL)
+             WHERE s.aluno_id=? OR (s.grupo_id IS NOT NULL AND EXISTS(
+                 SELECT 1 FROM agenda a WHERE a.missao_id=s.missao_id AND a.grupo_id=s.grupo_id AND a.aluno_id=? AND a.status<>'cancelado'))
              ORDER BY s.data_envio DESC,s.id DESC"
         );
-        $plants->execute([$userId]);
+        $submissions->execute([$userId,$userId]);
         $rewards = $this->db->prepare(
             'SELECT r.id,r.pontos_debitados,r.criado_em,c.titulo,p.nome parceiro
              FROM resgate r LEFT JOIN recompensa c ON c.id=r.recompensa_id
@@ -213,7 +202,7 @@ final class ApiController extends Controller
              WHERE r.usuario_id=? ORDER BY r.criado_em DESC,r.id DESC'
         );
         $rewards->execute([$userId]);
-        $this->json(['plantios'=>$plants->fetchAll(),'recompensas'=>$rewards->fetchAll()]);
+        $this->json(['envios'=>$submissions->fetchAll(),'recompensas'=>$rewards->fetchAll()]);
     }
 
     public function submissions(): never
@@ -222,15 +211,21 @@ final class ApiController extends Controller
         $status = $_GET['status'] ?? 'pending';
         if (!in_array($status,['pending','approved','rejected'],true)) $this->json(['erro'=>'Status inválido'],422);
         $stmt = $this->db->prepare(
-            'SELECT s.id,s.descricao,s.url_foto,s.status,s.comentario_professor,s.data_envio,
-                    u.id aluno_id,u.nome aluno,u.turma,m.id missao_id,COALESCE(mp.titulo,m.titulo) atividade,COALESCE(mp.tipo,m.tipo) tipo,COALESCE(mp.pontos,m.pontos_recompensa) pontos
-             FROM submissao_missao s JOIN usuario u ON u.id=s.aluno_id JOIN missao m ON m.id=s.missao_id LEFT JOIN missao_publicada mp ON mp.id=s.missao_publicada_id
-             WHERE s.status=? ORDER BY s.data_envio'
+            "SELECT s.id,s.descricao,s.url_foto,s.status,s.comentario_professor,s.data_envio,s.grupo_id,
+                    u.id aluno_id,u.nome aluno,u.turma,m.id missao_id,m.titulo atividade,m.tipo,m.pontos_recompensa pontos,
+                    (SELECT GROUP_CONCAT(DISTINCT mu.nome ORDER BY mu.nome SEPARATOR ', ') FROM agenda a JOIN usuario mu ON mu.id=a.aluno_id
+                     WHERE a.missao_id=s.missao_id AND a.grupo_id=s.grupo_id AND a.status<>'cancelado') equipe
+             FROM submissao_missao s JOIN usuario u ON u.id=s.aluno_id JOIN missao m ON m.id=s.missao_id
+             WHERE s.status=? ORDER BY s.data_envio"
         );
         $stmt->execute([$status]);
         $this->json(['submissoes'=>$stmt->fetchAll()]);
     }
 
+    /**
+     * Aprovar credita os pontos da missão a CADA integrante do turno (uma única vez) e conclui o turno
+     * no calendário. Rejeitar mantém o turno agendado para a equipe reenviar a comprovação.
+     */
     public function reviewSubmission(int $id): never
     {
         $reviewer = $this->auth->user(['professor','admin']);
@@ -241,63 +236,48 @@ final class ApiController extends Controller
         try {
             $this->db->beginTransaction();
             $stmt = $this->db->prepare(
-                'SELECT s.aluno_id,s.status,s.missao_publicada_id,s.grupo_id,COALESCE(mp.pontos,m.pontos_recompensa) pontos_recompensa FROM submissao_missao s JOIN missao m ON m.id=s.missao_id LEFT JOIN missao_publicada mp ON mp.id=s.missao_publicada_id WHERE s.id=? FOR UPDATE'
+                'SELECT s.aluno_id,s.status,s.missao_id,s.grupo_id,m.pontos_recompensa,m.titulo FROM submissao_missao s JOIN missao m ON m.id=s.missao_id WHERE s.id=? FOR UPDATE'
             );
             $stmt->execute([$id]); $submission=$stmt->fetch();
             if (!$submission) { $this->db->rollBack(); $this->json(['erro'=>'Submissão não encontrada'],404); }
             if ($submission['status']!=='pending') { $this->db->rollBack(); $this->json(['erro'=>'Esta atividade já foi revisada'],409); }
-            $awardStudents = [(int)$submission['aluno_id']];
-            $shouldCredit = $status === 'approved';
-            if ($status === 'approved' && !empty($submission['missao_publicada_id'])) {
-                $lockMission = $this->db->prepare('SELECT id FROM missao_publicada WHERE id=? FOR UPDATE');
-                $lockMission->execute([(int)$submission['missao_publicada_id']]);
-                if (!$lockMission->fetchColumn()) { $this->db->rollBack(); $this->json(['erro'=>'A missão publicada foi removida'],409); }
-                // Só a equipe associada à comprovação participa da pontuação; uma missão publicada só gera pontuação uma vez.
-                $previousScore = $this->db->prepare('SELECT 1 FROM missao_pontuacao WHERE missao_publicada_id=? LIMIT 1');
-                $previousScore->execute([(int)$submission['missao_publicada_id']]);
-                $shouldCredit = !$previousScore->fetchColumn();
-                $submittedGroupId = !empty($submission['grupo_id']) ? (string)$submission['grupo_id'] : null;
-                if ($submittedGroupId !== null) {
-                    $roster = $this->db->prepare("SELECT DISTINCT aluno_id,COALESCE(grupo_id,CONCAT('legacy-',id)) grupo_pontuacao FROM agenda WHERE missao_publicada_id=? AND grupo_id=? AND status<>'cancelado'");
-                    $roster->execute([(int)$submission['missao_publicada_id'],$submittedGroupId]);
-                    $complete = $this->db->prepare("UPDATE agenda SET status='concluido' WHERE missao_publicada_id=? AND grupo_id=? AND status='agendado'");
-                    $complete->execute([(int)$submission['missao_publicada_id'],$submittedGroupId]);
-                } else {
-                    $roster = $this->db->prepare("SELECT aluno_id,COALESCE(grupo_id,CONCAT('legacy-',id)) grupo_pontuacao FROM agenda WHERE missao_publicada_id=? AND aluno_id=? AND status<>'cancelado' ORDER BY id DESC LIMIT 1");
-                    $roster->execute([(int)$submission['missao_publicada_id'],(int)$submission['aluno_id']]);
-                    $complete = $this->db->prepare("UPDATE agenda SET status='concluido' WHERE missao_publicada_id=? AND aluno_id=? AND status='agendado'");
-                    $complete->execute([(int)$submission['missao_publicada_id'],(int)$submission['aluno_id']]);
+            $groupId = $submission['grupo_id'];
+            $members = [(int)$submission['aluno_id']];
+            if ($groupId !== null) {
+                $rows = $this->db->prepare("SELECT aluno_id FROM agenda WHERE missao_id=? AND grupo_id=? AND status<>'cancelado' ORDER BY id FOR UPDATE");
+                $rows->execute([(int)$submission['missao_id'],$groupId]);
+                $members = array_values(array_unique(array_map('intval',$rows->fetchAll(PDO::FETCH_COLUMN))));
+                if ($status==='approved') {
+                    if ($members === []) { $this->db->rollBack(); $this->json(['erro'=>'O turno desta equipe foi cancelado'],409); }
+                    $done = $this->db->prepare("SELECT 1 FROM agenda WHERE missao_id=? AND status='concluido' AND grupo_id<>? LIMIT 1");
+                    $done->execute([(int)$submission['missao_id'],$groupId]);
+                    if ($done->fetchColumn()) { $this->db->rollBack(); $this->json(['erro'=>'Esta missão já foi concluída por outra equipe. Rejeite este envio.'],409); }
                 }
-                $awardStudents = $roster->fetchAll(PDO::FETCH_ASSOC);
-                if (!$awardStudents) $awardStudents = [['aluno_id'=>(int)$submission['aluno_id'],'grupo_pontuacao'=>$submittedGroupId ?? ('legacy-submission-'.$id)]];
             }
-            $update=$this->db->prepare("UPDATE submissao_missao SET status=?,professor_validado=?,comentario_professor=?,revisado_por=?,revisado_em=NOW() WHERE id=? AND status='pending'");
+            $update=$this->db->prepare('UPDATE submissao_missao SET status=?,professor_validado=?,comentario_professor=?,revisado_por=?,revisado_em=NOW() WHERE id=?');
             $update->execute([$status,$status==='approved'?1:0,$comment?:null,(int)$reviewer['id'],$id]);
-            if ($update->rowCount() !== 1) { $this->db->rollBack(); $this->json(['erro'=>'Esta atividade já foi revisada'],409); }
             $credited=0;
-            $scoreProcessed=false;
-            if ($shouldCredit) {
-                $pointsPerStudent=(int)$submission['pontos_recompensa'];
-                $points=$this->db->prepare('UPDATE usuario SET pontos_totais=pontos_totais+?,xp=xp+?,ultima_atividade_em=CURDATE() WHERE id=?');
-                if (!empty($submission['missao_publicada_id'])) {
-                    $mark=$this->db->prepare("INSERT IGNORE INTO missao_pontuacao (missao_publicada_id,grupo_id,aluno_id,pontos,fonte) VALUES (?,?,?,?,'submissao')");
-                    foreach ($awardStudents as $member) {
-                        $studentId=(int)$member['aluno_id'];
-                        $mark->execute([(int)$submission['missao_publicada_id'],(string)$member['grupo_pontuacao'],$studentId,$pointsPerStudent]);
-                        if ($mark->rowCount()===1) { $points->execute([$pointsPerStudent,$pointsPerStudent,$studentId]); $credited += $pointsPerStudent; $this->checkAchievements($studentId); $scoreProcessed=true; }
-                    }
-                } else {
-                    $studentId=(int)$submission['aluno_id'];
-                    $points->execute([$pointsPerStudent,$pointsPerStudent,$studentId]);
-                    $credited=$pointsPerStudent;
-                    $this->checkAchievements($studentId);
-                    $scoreProcessed=true;
+            if ($status==='approved') {
+                $credited=(int)$submission['pontos_recompensa'];
+                $points=$this->db->prepare('UPDATE usuario SET pontos_totais=pontos_totais+?, ultima_atividade_em=CURDATE() WHERE id=?');
+                foreach ($members as $memberId) {
+                    $points->execute([$credited,$memberId]);
+                    $this->checkAchievements($memberId);
+                }
+                if ($groupId !== null) {
+                    $this->db->prepare("UPDATE agenda SET status='concluido' WHERE missao_id=? AND grupo_id=? AND status='agendado'")->execute([(int)$submission['missao_id'],$groupId]);
                 }
             }
+            $team = count($members) > 1;
             $notification=$this->db->prepare('INSERT INTO notificacao (usuario_id,tipo,titulo,mensagem,link) VALUES (?,?,?,?,\'/jardim\')');
-            $notification->execute([(int)$submission['aluno_id'],$status==='approved'?'atividade_aprovada':'atividade_rejeitada',$status==='approved'?'Comprovação aprovada!':'Comprovação rejeitada',$status==='approved'?($scoreProcessed?'Sua missão foi aprovada e a pontuação da atividade foi processada.':'Sua missão foi aprovada; a pontuação desta missão já havia sido processada.') : ($comment?:'Confira o comentário do professor.')]);
+            $message = $status==='approved'
+                ? ($team ? 'Sua equipe concluiu "'.$submission['titulo'].'". Seus pontos já foram creditados.' : 'Seus pontos já foram creditados.')
+                : ($comment?:'Confira o comentário do professor.');
+            foreach (array_values(array_unique(array_merge($members,[(int)$submission['aluno_id']]))) as $memberId) {
+                $notification->execute([$memberId,$status==='approved'?'atividade_aprovada':'atividade_rejeitada',$status==='approved'?'Missão aprovada!':'Missão rejeitada',$message]);
+            }
             $this->db->commit();
-            $this->json(['mensagem'=>$status==='approved'?'Comprovação aprovada!':'Comprovação rejeitada','pontos_creditados'=>$credited]);
+            $this->json(['mensagem'=>$status==='approved'?'Missão aprovada!':'Missão rejeitada','pontos_creditados'=>$credited,'integrantes'=>count($members)]);
         } catch (Throwable $e) { if ($this->db->inTransaction()) $this->db->rollBack(); throw $e; }
     }
 

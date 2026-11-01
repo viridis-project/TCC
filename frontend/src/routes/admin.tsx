@@ -48,6 +48,7 @@ type Submission = {
   aluno: string;
   atividade: string;
   pontos: number;
+  equipe: string | null;
 };
 type Partner = {
   id: number;
@@ -132,7 +133,7 @@ function AdminPage() {
     );
   const pending: PendingItem[] = data.submissions.map((s) => ({
     id: s.id,
-    student: s.aluno,
+    student: s.equipe && s.equipe !== s.aluno ? `${s.aluno} (equipe: ${s.equipe})` : s.aluno,
     activity: s.atividade,
     date: new Date(s.data_envio).toLocaleDateString("pt-BR"),
     points: Number(s.pontos),

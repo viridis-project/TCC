@@ -85,12 +85,39 @@ export interface Module {
   licoes: Lesson[];
 }
 
+export type MissionType = "plant" | "water" | "compost" | "share" | "outro";
+
+/** Tipos de missão: o tipo define o impacto no jardim; os pontos são só uma sugestão inicial. */
+export const missionTypes: Record<MissionType, { label: string; points: number }> = {
+  plant: { label: "Plantio", points: 50 },
+  water: { label: "Rega", points: 20 },
+  compost: { label: "Compostagem", points: 75 },
+  share: { label: "Compartilhar", points: 25 },
+  outro: { label: "Outra", points: 10 },
+};
+
+export type MissionStatus = "disponivel" | "agendada" | "em_analise" | "concluida";
+export type SubmissionStatus = "pending" | "approved" | "rejected";
+
+/** Missão publicada para a turma do aluno: fica disponível até alguém reservar o turno. */
 export interface Mission {
   id: number;
   titulo: string;
   descricao: string;
-  tipo: "plant" | "water" | "compost" | "share";
-  pontos_recompensa: number;
+  imagem: string | null;
+  tipo: MissionType;
+  pontos: number;
+  max_alunos: number;
+  modo_participacao: "escolher" | "aberto" | "particular";
+  professor: string;
+  status: MissionStatus;
+  participantes: number;
+  horario: string | null;
+  grupo_id: string | null;
+  convite_id: number | null;
+  participando: number;
+  envio_status: SubmissionStatus | null;
+  envio_comentario: string | null;
 }
 
 export function userQuery() {

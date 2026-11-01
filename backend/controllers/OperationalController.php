@@ -57,15 +57,17 @@ final class OperationalController extends Controller
     public function garden(): never
     {
         $user=$this->auth->user(['aluno']);
-        $stmt=$this->db->prepare("SELECT m.tipo,COUNT(*) quantidade FROM submissao_missao s JOIN missao m ON m.id=s.missao_id WHERE s.aluno_id=? AND s.status='approved' GROUP BY m.tipo");
-        $stmt->execute([(int)$user['id']]);
+        // Conta as missões aprovadas feitas pelo aluno ou pela equipe da qual ele participou.
+        $mine="(s.aluno_id=? OR (s.grupo_id IS NOT NULL AND EXISTS(SELECT 1 FROM agenda a WHERE a.missao_id=s.missao_id AND a.grupo_id=s.grupo_id AND a.aluno_id=? AND a.status<>'cancelado')))";
+        $stmt=$this->db->prepare("SELECT m.tipo,COUNT(*) quantidade FROM submissao_missao s JOIN missao m ON m.id=s.missao_id WHERE $mine AND s.status='approved' GROUP BY m.tipo");
+        $stmt->execute([(int)$user['id'],(int)$user['id']]);
         $counts=['plant'=>0,'water'=>0,'compost'=>0,'share'=>0];
         foreach ($stmt->fetchAll() as $row) $counts[$row['tipo']] = (int)$row['quantidade'];
         $plants=$counts['plant']; $water=$counts['water']; $compost=$counts['compost'];
         $achievements=$this->db->prepare('SELECT c.id,c.titulo,c.descricao,c.icone,c.regra,CASE WHEN uc.usuario_id IS NULL THEN 0 ELSE 1 END conquistada,uc.conquistada_em FROM conquista c LEFT JOIN usuario_conquista uc ON uc.conquista_id=c.id AND uc.usuario_id=? ORDER BY c.id');
         $achievements->execute([(int)$user['id']]);
-        $growth=$this->db->prepare("SELECT DATE_FORMAT(s.revisado_em,'%Y-%m') mes,SUM(m.pontos_recompensa) valor FROM submissao_missao s JOIN missao m ON m.id=s.missao_id WHERE s.aluno_id=? AND s.status='approved' AND s.revisado_em>=DATE_SUB(CURDATE(),INTERVAL 5 MONTH) GROUP BY DATE_FORMAT(s.revisado_em,'%Y-%m') ORDER BY mes");
-        $growth->execute([(int)$user['id']]);
+        $growth=$this->db->prepare("SELECT DATE_FORMAT(s.revisado_em,'%Y-%m') mes,SUM(m.pontos_recompensa) valor FROM submissao_missao s JOIN missao m ON m.id=s.missao_id WHERE $mine AND s.status='approved' AND s.revisado_em>=DATE_SUB(CURDATE(),INTERVAL 5 MONTH) GROUP BY DATE_FORMAT(s.revisado_em,'%Y-%m') ORDER BY mes");
+        $growth->execute([(int)$user['id'],(int)$user['id']]);
         $this->json(['resumo'=>[
             'plantas_ativas'=>$plants,
             'litros_economizados'=>$water*10,

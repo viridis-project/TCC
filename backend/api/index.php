@@ -9,6 +9,7 @@ use Viridis\controllers\ConviteProfessorController;
 use Viridis\controllers\DirectorController;
 use Viridis\controllers\GardenController;
 use Viridis\controllers\LearningController;
+use Viridis\controllers\MissionController;
 use Viridis\services\LearningException;
 use Viridis\controllers\OperationalController;
 use Viridis\controllers\PartnerController;
@@ -31,6 +32,7 @@ try {
     $learning = new LearningController($db, $auth);
     $partners = new PartnerController($db, $auth);
     $v2 = new V2Controller($db, $auth, $config);
+    $missions = new MissionController($db, $auth, $config);
     $director = new DirectorController($db, $auth);
     $invites = new ConviteProfessorController($db, $auth, $config);
     $authController = new AuthController($db);
@@ -56,7 +58,14 @@ try {
     if ($route('GET','#^/api/licoes/(\d+)/quiz$#',[$api,'quiz'])) exit;
     if ($route('POST','#^/api/licoes/(\d+)/quiz/submeter$#',[$api,'submitQuiz'])) exit;
     if ($route('GET','#^/api/historico$#',[$api,'history'])) exit;
-    if ($route('GET','#^/api/missoes$#',[$api,'missoes'])) exit;
+    if ($route('GET','#^/api/missoes$#',[$missions,'list'])) exit;
+    if ($route('POST','#^/api/missoes$#',[$missions,'create'])) exit;
+    if ($route('PUT','#^/api/missoes/(\d+)$#',[$missions,'toggle'])) exit;
+    if ($route('POST','#^/api/missoes/(\d+)/aceitar$#',[$missions,'accept'])) exit;
+    if ($route('POST','#^/api/missoes/(\d+)/entrar$#',[$missions,'join'])) exit;
+    if ($route('GET','#^/api/missoes/(\d+)/alunos$#',[$missions,'people'])) exit;
+    if ($route('POST','#^/api/missoes/(\d+)/convidar$#',[$missions,'invite'])) exit;
+    if ($route('POST','#^/api/convites-missao/(\d+)/responder$#',[$missions,'respondInvite'])) exit;
     if ($route('POST','#^/api/submissoes$#',[$api,'createSubmission'])) exit;
     if ($route('GET','#^/api/submissoes$#',[$api,'submissions'])) exit;
     if ($route('PUT','#^/api/submissoes/(\d+)/revisar$#',[$api,'reviewSubmission'])) exit;
@@ -84,21 +93,6 @@ try {
     if ($route('GET','#^/api/agenda/aluno$#',[$v2,'studentAgenda'])) exit;
     if ($route('GET','#^/api/agenda/professor$#',[$v2,'teacherAgenda'])) exit;
     if ($route('GET','#^/api/agenda/diretor$#',fn()=>$v2->directorAgenda())) exit;
-    if ($route('POST','#^/api/missoes-publicadas$#',[$v2,'createAgenda'])) exit;
-    if ($route('POST','#^/api/agenda$#',[$v2,'createAgenda'])) exit; // alias legado
-    // Rotas canônicas da mecânica unificada de missões. As rotas antigas seguem como aliases temporários.
-    if ($route('POST','#^/api/missoes-publicadas/(\d+)/aceitar$#',[$v2,'acceptTask'])) exit;
-    if ($route('POST','#^/api/missoes-publicadas/(\d+)/entrar$#',[$v2,'joinTask'])) exit;
-    if ($route('GET','#^/api/missoes-publicadas/(\d+)/alunos$#',[$v2,'taskPeople'])) exit;
-    if ($route('POST','#^/api/missoes-publicadas/(\d+)/convidar$#',[$v2,'inviteTask'])) exit;
-    if ($route('POST','#^/api/convites-missao/(\d+)/responder$#',[$v2,'respondTaskInvite'])) exit;
-    if ($route('PUT','#^/api/missoes-publicadas/(\d+)$#',[$v2,'toggleTask'])) exit;
-    if ($route('POST','#^/api/tarefas-abertas/(\d+)/aceitar$#',[$v2,'acceptTask'])) exit;
-    if ($route('POST','#^/api/tarefas-abertas/(\d+)/entrar$#',[$v2,'joinTask'])) exit;
-    if ($route('GET','#^/api/tarefas-abertas/(\d+)/alunos$#',[$v2,'taskPeople'])) exit;
-    if ($route('POST','#^/api/tarefas-abertas/(\d+)/convidar$#',[$v2,'inviteTask'])) exit;
-    if ($route('POST','#^/api/convites-tarefa/(\d+)/responder$#',[$v2,'respondTaskInvite'])) exit;
-    if ($route('PUT','#^/api/tarefas-abertas/(\d+)$#',[$v2,'toggleTask'])) exit;
     if ($route('PUT','#^/api/agenda/(\d+)/status$#',[$v2,'agendaStatus'])) exit;
     if ($route('GET','#^/api/gestao/cursos$#',[$learning,'courses'])) exit;
     if ($route('POST','#^/api/gestao/cursos$#',[$learning,'createCourse'])) exit;

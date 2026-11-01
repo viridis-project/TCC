@@ -13,6 +13,7 @@ export const Route = createFileRoute("/historico")({
 
 type PlantStatus = "pending" | "approved" | "rejected";
 type Plant = {
+  equipe?: string | null;
   id: number;
   titulo: string;
   descricao: string;
@@ -29,7 +30,7 @@ type Reward = {
   pontos_debitados: number;
   criado_em: string;
 };
-type UserHistory = { plantios: Plant[]; recompensas: Reward[] };
+type UserHistory = { envios: Plant[]; recompensas: Reward[] };
 
 const statuses = {
   pending: { label: "Em análise", style: "bg-warning/15 text-foreground" },
@@ -96,7 +97,7 @@ function HistoryPage() {
     );
   }
 
-  const { plantios, recompensas } = history.data;
+  const { envios: plantios, recompensas } = history.data;
   const filtered = plantios.filter((plant) => status === "all" || plant.status === status);
   const spent = recompensas.reduce((total, reward) => total + Number(reward.pontos_debitados), 0);
   return (
@@ -108,13 +109,13 @@ function HistoryPage() {
           </div>
           <h1 className="mt-2 text-3xl font-bold">Meu histórico</h1>
           <p className="mt-2 text-sm text-white/80">
-            Acompanhe seus plantios e as recompensas que você já resgatou.
+            Acompanhe suas missões e as recompensas que você já resgatou.
           </p>
         </section>
 
         <div className="grid gap-3 sm:grid-cols-3">
           {[
-            { label: "Plantios enviados", value: plantios.length, icon: Sprout },
+            { label: "Missões enviadas", value: plantios.length, icon: Sprout },
             { label: "Recompensas resgatadas", value: recompensas.length, icon: Gift },
             { label: "Pontos utilizados", value: spent, icon: History },
           ].map(({ label, value, icon: Icon }) => (
@@ -134,7 +135,7 @@ function HistoryPage() {
         <Tabs defaultValue="plantios" className="space-y-5">
           <TabsList className="grid h-auto w-full grid-cols-2 sm:w-96">
             <TabsTrigger value="plantios" className="gap-2 py-3">
-              <Sprout className="h-4 w-4" /> Plantios
+              <Sprout className="h-4 w-4" /> Missões
             </TabsTrigger>
             <TabsTrigger value="recompensas" className="gap-2 py-3">
               <Gift className="h-4 w-4" /> Recompensas
@@ -144,7 +145,7 @@ function HistoryPage() {
           <TabsContent value="plantios" className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h2 className="text-xl font-bold">Histórico de plantios</h2>
+                <h2 className="text-xl font-bold">Histórico de missões</h2>
                 <p className="text-sm text-muted-foreground">Do mais recente ao mais antigo.</p>
               </div>
               <div className="flex items-center gap-2">
@@ -174,8 +175,8 @@ function HistoryPage() {
                 <Sprout className="mx-auto mb-3 h-8 w-8 text-primary" />
                 <p className="font-semibold">
                   {plantios.length
-                    ? "Nenhum plantio com esse status."
-                    : "Você ainda não registrou plantios."}
+                    ? "Nenhuma missão com esse status."
+                    : "Você ainda não enviou comprovações de missões."}
                 </p>
                 <Link to="/jardim" className={`${buttonStyle} mt-4`}>
                   Ir para meu jardim
@@ -192,7 +193,7 @@ function HistoryPage() {
                       {plant.url_foto && (
                         <img
                           src={backendAsset(plant.url_foto)}
-                          alt={`Foto do plantio: ${plant.titulo}`}
+                          alt={`Comprovação: ${plant.titulo}`}
                           loading="lazy"
                           className="h-40 w-full rounded-xl object-cover sm:h-28 sm:w-28"
                         />
@@ -209,6 +210,9 @@ function HistoryPage() {
                         <p className="text-xs text-muted-foreground">
                           Enviado em {formatDate(plant.data_envio)}
                         </p>
+                        {plant.equipe && plant.equipe.includes(",") && (
+                          <p className="text-xs text-muted-foreground">Equipe: {plant.equipe}</p>
+                        )}
                         <p className="whitespace-pre-wrap break-words text-sm">{plant.descricao}</p>
                         {plant.status === "pending" && (
                           <p className="text-xs text-muted-foreground">

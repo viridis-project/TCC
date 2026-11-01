@@ -67,7 +67,7 @@ final class GardenController extends Controller
         $tab = $_GET['aba'] ?? 'envios';
         $status = $_GET['status'] ?? 'all';
         $type = $_GET['tipo'] ?? 'all';
-        if (!in_array($tab,['envios','alteracoes','tarefas','missoes'],true)
+        if (!in_array($tab,['envios','alteracoes','missoes'],true)
             || !in_array($status,['all','pending','approved','rejected'],true)
             || !in_array($type,['all','plant','water','compost','share','outro'],true)) {
             $this->json(['erro'=>'Filtro inválido'],422);
@@ -81,23 +81,25 @@ final class GardenController extends Controller
              FROM submissao_missao s JOIN usuario u ON u.id=s.aluno_id WHERE u.turma_id=?"
         );
         $summary->execute([$classId]);
-        $tasksStmt=$this->db->prepare("SELECT ta.id,ta.titulo,ta.descricao,ta.instrucoes,ta.imagem,ta.tipo,ta.ativa,ta.criado_em,ta.pontos,ta.max_alunos,ta.modo_participacao,m.titulo missao,u.nome criador,
-                CASE WHEN EXISTS(SELECT 1 FROM agenda a WHERE a.missao_publicada_id=ta.id AND a.status='concluido') OR EXISTS(SELECT 1 FROM submissao_missao sm WHERE sm.missao_publicada_id=ta.id AND sm.status='approved') THEN 'concluida'
-                     WHEN EXISTS(SELECT 1 FROM agenda a WHERE a.missao_publicada_id=ta.id AND a.status='agendado' AND a.data_hora>=CURDATE()) THEN 'agendada' ELSE 'disponivel' END status,
-                (SELECT COUNT(DISTINCT a.aluno_id) FROM agenda a WHERE a.missao_publicada_id=ta.id AND a.status='agendado' AND a.data_hora>=CURDATE()) participantes
-            FROM missao_publicada ta LEFT JOIN missao m ON m.id=ta.missao_id JOIN usuario u ON u.id=ta.criador_id
-            JOIN turma_escolar tc ON tc.id=ta.turma_id WHERE ta.turma_id=? AND (tc.instituicao_id=? OR ?='admin') ORDER BY ta.criado_em DESC");
-        $tasksStmt->execute([$classId,(int)($user['instituicao_id']??0),$user['perfil_nome']]); $tasks=$tasksStmt->fetchAll();
-        $participants=$this->db->prepare("SELECT a.id,a.titulo,a.data_hora,a.status,u.nome aluno FROM agenda a JOIN usuario u ON u.id=a.aluno_id WHERE a.missao_publicada_id=? ORDER BY a.data_hora,u.nome");
-        foreach($tasks as &$task){$participants->execute([(int)$task['id']]);$task['inscritos']=$participants->fetchAll();}
+        $missionsStmt=$this->db->prepare("SELECT m.id,m.titulo,m.descricao,m.imagem,m.tipo,m.ativa,m.data_criacao criado_em,m.pontos_recompensa pontos,m.max_alunos,m.modo_participacao,u.nome criador,
+                CASE WHEN EXISTS(SELECT 1 FROM agenda a WHERE a.missao_id=m.id AND a.status='concluido') THEN 'concluida'
+                     WHEN EXISTS(SELECT 1 FROM submissao_missao sp WHERE sp.missao_id=m.id AND sp.status='pending') THEN 'em_analise'
+                     WHEN EXISTS(SELECT 1 FROM agenda a WHERE a.missao_id=m.id AND ".MissionController::LIVE_TURN.") THEN 'agendada' ELSE 'disponivel' END status,
+                (SELECT COUNT(DISTINCT a.aluno_id) FROM agenda a WHERE a.missao_id=m.id AND ".MissionController::LIVE_TURN.") participantes
+            FROM missao m JOIN usuario u ON u.id=m.criador_id
+            JOIN turma_escolar tc ON tc.id=m.turma_id WHERE m.turma_id=? AND (tc.instituicao_id=? OR ?='admin') ORDER BY m.data_criacao DESC,m.id DESC");
+        $missionsStmt->execute([$classId,(int)($user['instituicao_id']??0),$user['perfil_nome']]); $missions=$missionsStmt->fetchAll();
+        $participants=$this->db->prepare("SELECT a.id,a.titulo,a.data_hora,a.status,u.nome aluno FROM agenda a JOIN usuario u ON u.id=a.aluno_id WHERE a.missao_id=? ORDER BY a.data_hora,u.nome");
+        foreach($missions as &$mission){$participants->execute([(int)$mission['id']]);$mission['inscritos']=$participants->fetchAll();}
+        unset($mission);
 
         $where = 'u.turma_id=?';
         $bindings = [$classId];
         if ($tab === 'alteracoes') $where .= ' AND s.revisado_em IS NOT NULL';
         if ($status !== 'all') { $where .= ' AND s.status=?'; $bindings[] = $status; }
-        if ($type !== 'all') { $where .= ' AND COALESCE(mp.tipo,m.tipo)=?'; $bindings[] = $type; }
+        if ($type !== 'all') { $where .= ' AND m.tipo=?'; $bindings[] = $type; }
         $from = 'FROM submissao_missao s JOIN usuario u ON u.id=s.aluno_id
-                 JOIN missao m ON m.id=s.missao_id LEFT JOIN missao_publicada mp ON mp.id=s.missao_publicada_id LEFT JOIN usuario r ON r.id=s.revisado_por';
+                 JOIN missao m ON m.id=s.missao_id LEFT JOIN usuario r ON r.id=s.revisado_por';
         $count = $this->db->prepare("SELECT COUNT(*) $from WHERE $where");
         $count->execute($bindings);
         $total = (int)$count->fetchColumn();
@@ -106,7 +108,7 @@ final class GardenController extends Controller
         $order = $tab === 'alteracoes' ? 's.revisado_em' : 's.data_envio';
         $rows = $this->db->prepare(
             "SELECT s.id,s.descricao,s.url_foto,s.status,s.data_envio,s.revisado_em,
-                    s.comentario_professor,u.nome aluno,COALESCE(mp.titulo,m.titulo) atividade,COALESCE(mp.tipo,m.tipo) tipo,r.nome revisor
+                    s.comentario_professor,u.nome aluno,m.titulo atividade,m.tipo,r.nome revisor
              $from WHERE $where ORDER BY $order DESC,s.id DESC LIMIT ? OFFSET ?"
         );
         foreach ($bindings as $index => $value) {
@@ -116,7 +118,7 @@ final class GardenController extends Controller
         $rows->bindValue(count($bindings) + 2,($page - 1) * 12,PDO::PARAM_INT);
         $rows->execute();
         $this->json([
-            'turma'=>$class,'resumo'=>$summary->fetch(),'registros'=>$rows->fetchAll(),'missoes_publicadas'=>$tasks,
+            'turma'=>$class,'resumo'=>$summary->fetch(),'registros'=>$rows->fetchAll(),'missoes'=>$missions,
             'paginacao'=>['pagina'=>$page,'paginas'=>$pages,'total'=>$total],
         ]);
     }
