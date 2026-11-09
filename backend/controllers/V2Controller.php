@@ -36,68 +36,80 @@ final class V2Controller extends Controller
         $this->json(['mensagem'=>'Notificação lida']);
     }
 
+    /**
+     * Colunas e junções comuns às agendas. Cada linha é a participação de um aluno em um turno de missão.
+     * Estados exibidos: agendado, em_analise (comprovação enviada), concluido, cancelado e nao_realizada.
+     */
+    private const AGENDA_SELECT = "SELECT a.id,a.missao_id,a.grupo_id,a.titulo,a.data_hora,
+        CASE WHEN a.status='agendado' AND EXISTS(SELECT 1 FROM submissao_missao sp WHERE sp.missao_id=a.missao_id AND sp.grupo_id=a.grupo_id AND sp.status='pending') THEN 'em_analise'
+             WHEN a.status='agendado' AND a.data_hora<CURDATE() THEN 'nao_realizada'
+             ELSE a.status END status,
+        m.descricao,m.imagem,m.tipo,m.pontos_recompensa pontos,t.id turma_id,t.nome turma,u.id aluno_id,u.nome aluno,
+        (SELECT COUNT(DISTINCT peers.aluno_id) FROM agenda peers WHERE peers.missao_id=a.missao_id AND peers.grupo_id=a.grupo_id AND peers.status<>'cancelado') participantes,
+        (SELECT s.descricao FROM submissao_missao s WHERE s.missao_id=a.missao_id AND s.grupo_id=a.grupo_id ORDER BY s.id DESC LIMIT 1) envio_descricao,
+        (SELECT s.url_foto FROM submissao_missao s WHERE s.missao_id=a.missao_id AND s.grupo_id=a.grupo_id ORDER BY s.id DESC LIMIT 1) envio_foto,
+        (SELECT s.status FROM submissao_missao s WHERE s.missao_id=a.missao_id AND s.grupo_id=a.grupo_id ORDER BY s.id DESC LIMIT 1) envio_status,
+        (SELECT s.comentario_professor FROM submissao_missao s WHERE s.missao_id=a.missao_id AND s.grupo_id=a.grupo_id ORDER BY s.id DESC LIMIT 1) envio_comentario";
+    private const AGENDA_FROM = " FROM agenda a JOIN usuario u ON u.id=a.aluno_id LEFT JOIN missao m ON m.id=a.missao_id LEFT JOIN turma_escolar t ON t.id=a.turma_id";
+
     public function studentAgenda(): never
     {
         $user=$this->auth->user(['aluno']);
-        $stmt=$this->db->prepare('SELECT a.id,a.titulo,a.data_hora,a.status,a.missao_id,m.titulo missao,
-                t.nome turma,student.nome aluno,teacher.nome professor
-            FROM agenda a
-            JOIN usuario student ON student.id=a.aluno_id AND student.turma_id=?
-            LEFT JOIN missao m ON m.id=a.missao_id
-            LEFT JOIN turma_escolar t ON t.id=student.turma_id
-            JOIN usuario teacher ON teacher.id=a.professor_id
-            ORDER BY a.data_hora,student.nome');
-        $stmt->execute([(int)($user['turma_id']??0)]);
+        $stmt=$this->db->prepare(self::AGENDA_SELECT.",
+            EXISTS(SELECT 1 FROM agenda me WHERE me.missao_id=a.missao_id AND me.grupo_id=a.grupo_id AND me.aluno_id=? AND me.status<>'cancelado') minha,
+            teacher.nome professor".self::AGENDA_FROM." JOIN usuario teacher ON teacher.id=a.professor_id
+            WHERE u.turma_id=? ORDER BY a.data_hora,u.nome");
+        $stmt->execute([(int)$user['id'],(int)($user['turma_id']??0)]);
         $this->json(['agenda'=>$stmt->fetchAll()]);
     }
 
     public function teacherAgenda(): never
     {
         $user=$this->auth->user(['professor','admin']);
-        $stmt=$this->db->prepare('SELECT a.id,a.titulo,a.data_hora,a.status,a.missao_id,m.titulo missao,t.id turma_id,t.nome turma,u.id aluno_id,u.nome aluno FROM agenda a JOIN usuario u ON u.id=a.aluno_id LEFT JOIN turma_escolar t ON t.id=a.turma_id LEFT JOIN missao m ON m.id=a.missao_id WHERE a.professor_id=? OR ?=\'admin\' ORDER BY a.data_hora,u.nome');
-        $stmt->execute([(int)$user['id'],$user['perfil_nome']]);
-        $agenda=$stmt->fetchAll();
+        $stmt=$this->db->prepare(self::AGENDA_SELECT.self::AGENDA_FROM."
+            WHERE t.instituicao_id=? AND (?='admin' OR EXISTS (SELECT 1 FROM turma_professor tp WHERE tp.turma_id=a.turma_id AND tp.professor_id=?)) ORDER BY a.data_hora,u.nome");
+        $stmt->execute([(int)$user['instituicao_id'],$user['perfil_nome'],(int)$user['id']]); $agenda=$stmt->fetchAll();
         $turmasStmt=$this->db->prepare('SELECT DISTINCT t.id,t.nome,t.ano_letivo FROM turma_escolar t LEFT JOIN turma_professor tp ON tp.turma_id=t.id WHERE t.instituicao_id=? AND (?=\'admin\' OR tp.professor_id=?) ORDER BY t.nome');
-        $turmasStmt->execute([(int)$user['instituicao_id'],$user['perfil_nome'],(int)$user['id']]);
-        $turmas=$turmasStmt->fetchAll();
+        $turmasStmt->execute([(int)$user['instituicao_id'],$user['perfil_nome'],(int)$user['id']]); $turmas=$turmasStmt->fetchAll();
         $students=$this->db->prepare("SELECT id,nome,turma FROM usuario WHERE turma_id=? AND perfil_id=(SELECT id FROM perfil WHERE nome='aluno' LIMIT 1) ORDER BY nome");
         foreach ($turmas as &$turma) { $students->execute([(int)$turma['id']]); $turma['alunos']=$students->fetchAll(); }
         $this->json(['agenda'=>$agenda,'turmas'=>$turmas]);
     }
 
-    public function createAgenda(): never
+    public function directorAgenda(): never
     {
-        $teacher=$this->auth->user(['professor','admin']); $data=$this->input();
-        $students=$data['alunos']??[];
-        $classId=(int)($data['turma_id']??0);
-        if (!is_array($students)||$students===[]||$classId<1||trim((string)($data['titulo']??''))===''||empty($data['data_hora'])) $this->json(['erro'=>'Preencha turma, tarefa, data e alunos'],422);
-        $classCheck=$this->db->prepare("SELECT 1 FROM turma_escolar t LEFT JOIN turma_professor tp ON tp.turma_id=t.id AND tp.professor_id=? WHERE t.id=? AND t.instituicao_id=? AND (?='admin' OR tp.professor_id IS NOT NULL)");
-        $classCheck->execute([(int)$teacher['id'],$classId,(int)$teacher['instituicao_id'],$teacher['perfil_nome']]);
-        if(!$classCheck->fetchColumn())$this->json(['erro'=>'Você não é responsável por esta turma'],403);
-        $studentCheck=$this->db->prepare("SELECT 1 FROM usuario u JOIN perfil p ON p.id=u.perfil_id WHERE u.id=? AND u.turma_id=? AND p.nome='aluno'");
-        foreach(array_unique(array_map('intval',$students)) as $studentId){$studentCheck->execute([$studentId,$classId]);if(!$studentCheck->fetchColumn())$this->json(['erro'=>'Um dos alunos não pertence à turma selecionada'],422);}
-        try {
-            $this->db->beginTransaction();
-            $insert=$this->db->prepare("INSERT INTO agenda (aluno_id,professor_id,turma_id,missao_id,titulo,data_hora,status) VALUES (?,?,?,?,?,?,'agendado')");
-            $notify=$this->db->prepare("INSERT INTO notificacao (usuario_id,tipo,titulo,mensagem,link) VALUES (?,'tarefa_agendada','Nova tarefa agendada',?,'/horarios')");
-            foreach (array_unique(array_map('intval',$students)) as $studentId) {
-                $insert->execute([$studentId,(int)$teacher['id'],$classId,(int)($data['missao_id']??0)?:null,trim((string)$data['titulo']),$data['data_hora']]);
-                $notify->execute([$studentId,trim((string)$data['titulo']).' em '.date('d/m/Y H:i',strtotime($data['data_hora']))]);
-            }
-            $this->db->commit(); $this->json(['mensagem'=>'Tarefa agendada com sucesso'],201);
-        } catch (Throwable $e) { if($this->db->inTransaction())$this->db->rollBack(); throw $e; }
+        $user=$this->auth->user(['diretor']);
+        $stmt=$this->db->prepare(self::AGENDA_SELECT.self::AGENDA_FROM." WHERE t.instituicao_id=? ORDER BY a.data_hora,u.nome");
+        $stmt->execute([(int)$user['instituicao_id']]);
+        $classes=$this->db->prepare('SELECT id,nome,ano_letivo FROM turma_escolar WHERE instituicao_id=? ORDER BY nome');
+        $classes->execute([(int)$user['instituicao_id']]); $turmas=$classes->fetchAll();
+        $students=$this->db->prepare("SELECT id,nome,turma FROM usuario WHERE turma_id=? AND perfil_id=(SELECT id FROM perfil WHERE nome='aluno' LIMIT 1) ORDER BY nome");
+        foreach($turmas as &$class){$students->execute([(int)$class['id']]);$class['alunos']=$students->fetchAll();}
+        $this->json(['agenda'=>$stmt->fetchAll(),'turmas'=>$turmas]);
     }
 
+    /**
+     * O professor só cancela turnos: a conclusão de uma missão acontece ao aprovar a comprovação enviada
+     * (ApiController::reviewSubmission), que é o único caminho que credita pontos.
+     */
     public function agendaStatus(int $id): never
     {
         $teacher=$this->auth->user(['professor','admin']); $data=$this->input(); $status=$data['status']??'';
-        if(!in_array($status,['concluido','cancelado'],true))$this->json(['erro'=>'Status inválido'],422);
-        $stmt=$this->db->prepare("UPDATE agenda SET status=? WHERE id=? AND (professor_id=? OR ?='admin')");
-        $stmt->execute([$status,$id,(int)$teacher['id'],$teacher['perfil_nome']]);
-        if(!$stmt->rowCount())$this->json(['erro'=>'Tarefa não encontrada'],404);
-        $this->json(['mensagem'=>$status==='concluido'?'Tarefa concluída':'Tarefa cancelada']);
+        if($status==='concluido')$this->json(['erro'=>'Para concluir uma missão, aprove a comprovação enviada pelos alunos'],422);
+        if($status!=='cancelado')$this->json(['erro'=>'Status inválido'],422);
+        try {
+            $this->db->beginTransaction();
+            $query=$this->db->prepare("SELECT a.missao_id,a.grupo_id FROM agenda a JOIN turma_escolar t ON t.id=a.turma_id WHERE a.id=? AND (?='admin' OR EXISTS(SELECT 1 FROM turma_professor tp WHERE tp.turma_id=a.turma_id AND tp.professor_id=?)) FOR UPDATE");
+            $query->execute([$id,$teacher['perfil_nome'],(int)$teacher['id']]); $item=$query->fetch();
+            if(!$item){$this->db->rollBack();$this->json(['erro'=>'Missão não encontrada ou sem acesso'],404);}
+            $pending=$this->db->prepare("SELECT 1 FROM submissao_missao WHERE missao_id=? AND grupo_id=? AND status='pending' LIMIT 1");
+            $pending->execute([$item['missao_id'],$item['grupo_id']]);
+            if($pending->fetchColumn()){$this->db->rollBack();$this->json(['erro'=>'Revise a comprovação enviada antes de cancelar o turno'],409);}
+            $update=$this->db->prepare("UPDATE agenda SET status='cancelado' WHERE id=? AND status='agendado'"); $update->execute([$id]);
+            $this->db->commit();
+            $this->json(['mensagem'=>'Turno cancelado. A missão volta a ficar disponível para a turma']);
+        } catch(Throwable $e){if($this->db->inTransaction())$this->db->rollBack();throw $e;}
     }
-
     public function directorDashboard(): never
     {
         $user=$this->auth->user(['diretor']);$iid=(int)$user['instituicao_id'];

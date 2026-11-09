@@ -14,6 +14,7 @@ import {
 import { PageShell } from "@/components/page-shell";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { apiFetch, backendAsset, type User } from "@/lib/api";
+import { toast } from "sonner";
 
 type Selection = { escola?: number; turma?: number };
 type School = { id: number; nome: string; total_turmas: number };
@@ -46,7 +47,9 @@ type ClassHistory = {
   resumo: { total_envios: number; pendentes: number; aprovados: number; rejeitados: number };
   registros: Activity[];
   paginacao: { pagina: number; paginas: number; total: number };
+  missoes: StaffMission[];
 };
+type StaffMission = { id: number; titulo: string; descricao: string; imagem: string | null; tipo: string; ativa: number; criado_em: string; criador: string; pontos: number; max_alunos: number; modo_participacao: string; participantes: number; status: "disponivel" | "agendada" | "em_analise" | "concluida"; inscritos: { id: number; titulo: string; data_hora: string; status: string; aluno: string }[] };
 
 const card = "rounded-lg border border-border/60 bg-card p-5 shadow-soft";
 const button =
@@ -337,6 +340,12 @@ function ClassGarden({
           ? Number(query.data?.turma.instituicao_id) || undefined
           : undefined,
     });
+  const toggleMission = async (task: StaffMission) => {
+    try {
+      const result = await apiFetch<{ mensagem: string }>(`/missoes/${task.id}`, { method: "PUT", body: JSON.stringify({ ativa: task.ativa ? 0 : 1 }) });
+      toast.success(result.mensagem); await query.refetch();
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Falha ao atualizar missão"); }
+  };
   const back = (
     <button className={button} onClick={goBack}>
       <ArrowLeft className="h-4 w-4" />
@@ -378,15 +387,17 @@ function ClassGarden({
         }}
         className="space-y-4"
       >
-        <TabsList className="grid h-auto w-full grid-cols-2 sm:w-96">
+        <TabsList className="grid h-auto w-full grid-cols-3 sm:w-[34rem]">
           <TabsTrigger value="envios" className="py-3">
             Envios dos alunos
           </TabsTrigger>
           <TabsTrigger value="alteracoes" className="py-3">
             Atualizações
           </TabsTrigger>
+          <TabsTrigger value="missoes" className="py-3">Missões</TabsTrigger>
         </TabsList>
         <div className="flex flex-wrap gap-3">
+          {tab !== "missoes" && <>
           <Filter
             label="Status"
             value={status}
@@ -408,8 +419,48 @@ function ClassGarden({
             }}
             options={Object.entries(types).map(([value, label]) => ({ value, label }))}
           />
+          </>}
         </div>
-        {["envios", "alteracoes"].map((value) => (
+        {tab === "missoes" && query.data && (
+          <div className="space-y-3">
+            {query.data.missoes.length ? query.data.missoes.map((mission) => {
+              const solo = Number(mission.max_alunos) === 1;
+              const badge = {
+                disponivel: ["Disponível", "bg-success/15 text-success"],
+                agendada: ["Agendada", "bg-primary/15 text-primary"],
+                em_analise: ["Em análise", "bg-warning/15 text-foreground"],
+                concluida: ["Concluída", "bg-muted text-muted-foreground"],
+              }[mission.status];
+              const facts: [string, string][] = [
+                ["Pontuação", `${mission.pontos} pts`],
+                ["Tipo", types[mission.tipo] ?? mission.tipo],
+                [solo ? "Modalidade" : "Participantes", solo ? "Individual" : `${mission.participantes}/${mission.max_alunos}`],
+              ];
+              // Missão individual não tem "quem pode participar".
+              if (!solo) facts.push(["Participação", mission.modo_participacao === "escolher" ? "Aguardando aceite" : mission.modo_participacao === "aberto" ? "Aberta" : "Por convite"]);
+              return (
+                <article key={mission.id} className={`${card} space-y-4`}>
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div className="flex min-w-0 gap-3">
+                      {mission.imagem && <img src={backendAsset(mission.imagem)} alt="" loading="lazy" className="h-16 w-16 shrink-0 rounded-lg object-cover" />}
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="text-base font-bold">{mission.titulo}</h3>
+                          <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${badge[1]}`}>{badge[0]}</span>
+                          <span className="rounded-full bg-muted px-2.5 py-1 text-[10px] font-bold text-muted-foreground">{mission.ativa ? "Publicada" : "Encerrada"}</span>
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground">Criada por {mission.criador}</p>
+                      </div>
+                    </div>
+                    <button className={button} onClick={() => void toggleMission(mission)}>{mission.ativa ? "Encerrar missão" : "Reabrir missão"}</button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">{facts.map(([label, value]) => <div key={label} className="rounded-lg bg-muted/60 px-3 py-2"><p className="text-[10px] font-semibold uppercase text-muted-foreground">{label}</p><p className="mt-1 text-sm font-bold">{value}</p></div>)}</div>
+                  {mission.inscritos.length ? <div><h4 className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">Turnos e alunos</h4><ul className="divide-y rounded-lg border">{mission.inscritos.map((a) => <li key={a.id} className="flex flex-wrap justify-between gap-2 px-3 py-2 text-sm"><span>{a.aluno} <span className="text-xs text-muted-foreground">· {a.status}</span></span><span className="text-muted-foreground">{date(a.data_hora)}</span></li>)}</ul></div> : <Empty>Nenhum aluno pegou esta missão ainda.</Empty>}
+                </article>
+              );
+            }) : <Empty>Nenhuma missão publicada para esta turma.</Empty>}
+          </div>
+        )}        {["envios", "alteracoes"].map((value) => (
           <TabsContent key={value} value={value} className="space-y-4">
             <p className="text-sm text-muted-foreground">
               {value === "envios"

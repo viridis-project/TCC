@@ -25,7 +25,10 @@ const icons: Record<string, React.ElementType> = {
   atividade_rejeitada: X,
   conquista: Medal,
   tarefa_agendada: Calendar,
+  missao_agendada: Calendar,
   designacao_professor: Users,
+  convite_tarefa: Users,
+  convite_missao: Users,
 };
 
 export function NotificationsModal({

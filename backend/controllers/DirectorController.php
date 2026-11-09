@@ -104,6 +104,8 @@ final class DirectorController extends Controller
         $this->ownedClass($classId);
         $count=$this->db->prepare('SELECT COUNT(*) FROM usuario WHERE turma_id=?');$count->execute([$classId]);
         if((int)$count->fetchColumn()>0)$this->json(['erro'=>'Realocar ou remover os alunos antes de excluir a turma'],409);
+        $missions=$this->db->prepare('SELECT COUNT(*) FROM missao WHERE turma_id=?');$missions->execute([$classId]);
+        if((int)$missions->fetchColumn()>0)$this->json(['erro'=>'Esta turma possui missões publicadas e não pode ser excluída'],409);
         $stmt=$this->db->prepare('DELETE FROM turma_escolar WHERE id=?');$stmt->execute([$classId]);
         $this->json(['mensagem'=>'Turma excluída']);
     }

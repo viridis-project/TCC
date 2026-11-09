@@ -12,6 +12,7 @@ import {
   School,
   History,
   CalendarClock,
+  Trophy,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useState } from "react";
@@ -25,6 +26,7 @@ const NAV = [
   { to: "/aprender", label: "APRENDER", icon: BookOpen },
   { to: "/jardim", label: "JARDIM", icon: Sprout },
   { to: "/horarios", label: "HORÁRIOS", icon: CalendarClock },
+  { to: "/ranking", label: "RANKING", icon: Trophy },
   { to: "/recompensas", label: "RECOMPENSAS", icon: Award },
   { to: "/historico", label: "HISTÓRICO", icon: History },
   { to: "/perfil", label: "PERFIL", icon: User },

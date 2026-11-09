@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { CalendarPlus } from "lucide-react";
 import {
@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { apiFetch, type Mission } from "@/lib/api";
 import { toast } from "sonner";
-import { DatePicker, TimePicker } from "@/components/ui/date-time-picker";
+
 
 type ClassRoom = { id: number; nome: string; alunos: { id: number; nome: string }[] };
 export function ScheduleTaskModal({
@@ -28,34 +28,34 @@ export function ScheduleTaskModal({
   onCreated: () => void;
 }) {
   const [classId, setClassId] = useState("");
-  const [students, setStudents] = useState<number[]>([]);
-  const [date, setDate] = useState("");
-  const [time, setTime] = useState("");
+  const [description, setDescription] = useState("");
   const [title, setTitle] = useState("");
   const [missionId, setMissionId] = useState("");
+  const [points, setPoints] = useState("0");
+  const [maxStudents, setMaxStudents] = useState("1");
   const selectedClass = useMemo(
     () => turmas.find((t) => t.id === Number(classId)),
     [classId, turmas],
   );
-  useEffect(() => setStudents([]), [classId]);
   const mutation = useMutation({
     mutationFn: () =>
       apiFetch<{ mensagem: string }>("/agenda", {
         method: "POST",
         body: JSON.stringify({
           turma_id: Number(classId),
-          alunos: students,
-          data_hora: `${date} ${time}:00`,
           titulo: title,
           missao_id: missionId ? Number(missionId) : null,
+          descricao: description,
+          pontos: Number(points),
+          max_alunos: Number(maxStudents),
         }),
       }),
     onSuccess: (r) => {
       toast.success(r.mensagem);
       setTitle("");
-      setDate("");
-      setTime("");
-      setStudents([]);
+      setDescription("");
+      setPoints("0");
+      setMaxStudents("1");
       onOpenChange(false);
       onCreated();
     },
@@ -63,8 +63,7 @@ export function ScheduleTaskModal({
   });
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!classId || students.length === 0 || !date || !time || title.trim() === "")
-      return toast.error("Preencha turma, alunos, data, horário e tarefa");
+    if (!classId || title.trim() === "") return toast.error("Preencha turma e título da tarefa");
     mutation.mutate();
   }
   return (
@@ -77,7 +76,7 @@ export function ScheduleTaskModal({
               Nova tarefa
             </DialogTitle>
             <DialogDescription className="text-white/80">
-              Agende uma atividade para um ou mais alunos.
+              Publique uma tarefa que os alunos poderão aceitar e agendar.
             </DialogDescription>
           </DialogHeader>
         </div>
@@ -96,39 +95,7 @@ export function ScheduleTaskModal({
               ))}
             </select>
           </Field>
-          <Field label="Alunos">
-            <div className="max-h-36 space-y-2 overflow-y-auto rounded-xl border border-border p-3">
-              {!selectedClass ? (
-                <span className="text-xs text-muted-foreground">Selecione uma turma</span>
-              ) : (
-                selectedClass.alunos.map((a) => (
-                  <label key={a.id} className="flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={students.includes(a.id)}
-                      onChange={(e) =>
-                        setStudents((current) =>
-                          e.target.checked
-                            ? [...current, a.id]
-                            : current.filter((id) => id !== a.id),
-                        )
-                      }
-                      className="h-4 w-4 accent-primary"
-                    />
-                    {a.nome}
-                  </label>
-                ))
-              )}
-            </div>
-          </Field>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <Field label="Data">
-              <DatePicker value={date} onChange={setDate} />
-            </Field>
-            <Field label="Horário">
-              <TimePicker value={time} onChange={setTime} />
-            </Field>
-          </div>
+          <p className="rounded-xl bg-muted p-3 text-xs text-muted-foreground">{selectedClass ? `${selectedClass.alunos.length} alunos poderão visualizar esta tarefa.` : "Selecione a turma que verá a tarefa."}</p>
           <Field label="Título da tarefa">
             <input
               value={title}
@@ -137,6 +104,9 @@ export function ScheduleTaskModal({
               className={inputCls}
               placeholder="Ex.: Regar o canteiro"
             />
+          </Field>
+          <Field label="Instruções (opcional)">
+            <textarea value={description} onChange={(e) => setDescription(e.target.value)} maxLength={2000} rows={3} className={inputCls} />
           </Field>
           <Field label="Missão vinculada (opcional)">
             <select
@@ -152,7 +122,10 @@ export function ScheduleTaskModal({
               ))}
             </select>
           </Field>
-          <DialogFooter>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="Pontuação da tarefa"><input type="number" min={0} max={10000} value={points} onChange={(e) => setPoints(e.target.value)} className={inputCls} /></Field>
+            <Field label="Máximo de alunos"><input type="number" min={1} max={100} value={maxStudents} onChange={(e) => setMaxStudents(e.target.value)} className={inputCls} /></Field>
+          </div>          <DialogFooter>
             <button
               type="button"
               onClick={() => onOpenChange(false)}
@@ -164,7 +137,7 @@ export function ScheduleTaskModal({
               disabled={mutation.isPending}
               className="min-h-11 rounded-lg bg-primary px-5 py-2 text-sm font-bold text-primary-foreground disabled:opacity-60"
             >
-              {mutation.isPending ? "Agendando..." : "Agendar tarefa"}
+              {mutation.isPending ? "Publicando..." : "Publicar tarefa"}
             </button>
           </DialogFooter>
         </form>

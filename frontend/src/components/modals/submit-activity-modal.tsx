@@ -48,10 +48,27 @@ interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   defaultType?: string;
+  publishedMissionId?: number;
+  publishedTitle?: string;
+  publishedInstructions?: string | null;
+  publishedType?: string;
+  publishedBaseMissionId?: number | null;
+  publishedPoints?: number;
   onSubmitted?: () => void;
 }
 
-export function SubmitActivityModal({ open, onOpenChange, defaultType, onSubmitted }: Props) {
+export function SubmitActivityModal({
+  open,
+  onOpenChange,
+  defaultType,
+  publishedMissionId,
+  publishedTitle,
+  publishedInstructions,
+  publishedType,
+  publishedBaseMissionId,
+  publishedPoints,
+  onSubmitted,
+}: Props) {
   const [type, setType] = useState(defaultType ?? "plant");
   const [description, setDescription] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -64,11 +81,15 @@ export function SubmitActivityModal({ open, onOpenChange, defaultType, onSubmitt
   useEffect(() => {
     if (open) setType(defaultType ?? "plant");
   }, [defaultType, open]);
-  const selectedBase = activityTypes.find((a) => a.id === type) ?? activityTypes[0];
-  const selectedMission = missions.find((mission) => mission.tipo === type);
+  const submissionType = publishedMissionId ? (publishedType ?? type) : type;
+  const selectedBase = activityTypes.find((a) => a.id === submissionType) ?? activityTypes[0];
+  const selectedMission =
+    (publishedBaseMissionId
+      ? missions.find((mission) => mission.id === publishedBaseMissionId)
+      : undefined) ?? missions.find((mission) => mission.tipo === submissionType);
   const selected = {
     ...selectedBase,
-    points: selectedMission?.pontos_recompensa ?? selectedBase.points,
+    points: publishedPoints ?? selectedMission?.pontos_recompensa ?? selectedBase.points,
   };
 
   async function handleSubmit(e: React.FormEvent) {
@@ -78,9 +99,11 @@ export function SubmitActivityModal({ open, onOpenChange, defaultType, onSubmitt
       return;
     }
     if (!file) return toast.error("Envie uma foto da atividade");
-    if (!selectedMission) return toast.error("Atividade não encontrada no servidor");
+    if (!selectedMission && !publishedMissionId)
+      return toast.error("Atividade não encontrada no servidor");
     const form = new FormData();
-    form.append("missao_id", String(selectedMission.id));
+    if (selectedMission) form.append("missao_id", String(selectedMission.id));
+    if (publishedMissionId) form.append("missao_publicada_id", String(publishedMissionId));
     form.append("descricao", description.trim());
     form.append("foto", file);
     setSubmitting(true);
@@ -90,7 +113,7 @@ export function SubmitActivityModal({ open, onOpenChange, defaultType, onSubmitt
         body: form,
       });
       toast.success(result.mensagem, {
-        description: `+${selected.points} pontos pendentes de aprovação do professor`,
+        description: `${selected.points} pontos após aprovação do professor`,
       });
       setDescription("");
       setFile(null);
@@ -108,39 +131,58 @@ export function SubmitActivityModal({ open, onOpenChange, defaultType, onSubmitt
       <DialogContent className="max-w-lg overflow-hidden rounded-xl border-border/60 p-0 sm:p-0">
         <div className="bg-gradient-hero p-6 text-primary-foreground">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold">Cadastrar atividade</DialogTitle>
+            <DialogTitle className="text-xl font-bold">Enviar comprovação</DialogTitle>
             <DialogDescription className="text-white/80">
-              Registre sua ação sustentável e ganhe pontos após verificação.
+              {publishedMissionId
+                ? "Envie a comprovação desta missão para avaliação."
+                : "Registre sua ação sustentável e ganhe pontos após verificação."}
             </DialogDescription>
           </DialogHeader>
         </div>
         <form onSubmit={handleSubmit} className="space-y-5 p-6">
           <div>
-            <div className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-              Tipo de atividade
-            </div>
-            <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {activityTypes.map((a) => {
-                const active = type === a.id;
-                return (
-                  <motion.button
-                    key={a.id}
-                    type="button"
-                    whileTap={{ scale: 0.96 }}
-                    onClick={() => setType(a.id)}
-                    className={`flex flex-col items-center gap-1 rounded-lg border-2 p-3 text-center transition-all ${
-                      active
-                        ? a.color + " ring-2 ring-primary/30"
-                        : "border-border/60 bg-background/60 text-muted-foreground"
-                    }`}
-                  >
-                    <a.icon className="h-5 w-5" />
-                    <span className="text-xs font-bold">{a.label}</span>
-                    <span className="text-[10px] font-bold">+{a.points}</span>
-                  </motion.button>
-                );
-              })}
-            </div>
+            {!publishedMissionId && (
+              <div className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                Tipo de atividade
+              </div>
+            )}
+            {!publishedMissionId && (
+              <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {activityTypes.map((a) => {
+                  const active = type === a.id;
+                  return (
+                    <motion.button
+                      key={a.id}
+                      type="button"
+                      whileTap={{ scale: 0.96 }}
+                      onClick={() => setType(a.id)}
+                      className={`flex flex-col items-center gap-1 rounded-lg border-2 p-3 text-center transition-all ${
+                        active
+                          ? a.color + " ring-2 ring-primary/30"
+                          : "border-border/60 bg-background/60 text-muted-foreground"
+                      }`}
+                    >
+                      <a.icon className="h-5 w-5" />
+                      <span className="text-xs font-bold">{a.label}</span>
+                      <span className="text-[10px] font-bold">+{a.points}</span>
+                    </motion.button>
+                  );
+                })}
+              </div>
+            )}
+            {publishedMissionId && (
+              <div className="rounded-lg border border-border/60 bg-background/60 p-3">
+                <p className="text-sm font-bold">{publishedTitle ?? "Missão"}</p>
+                {publishedInstructions && (
+                  <p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">
+                    {publishedInstructions}
+                  </p>
+                )}
+                <p className="mt-2 text-xs font-semibold text-muted-foreground">
+                  Pontuação: {selected.points} pts após avaliação
+                </p>
+              </div>
+            )}
           </div>
 
           <div>
