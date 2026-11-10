@@ -56,6 +56,10 @@ export default defineConfig(({ command, mode }) => ({
     tailwindcss(),
     tsconfigPaths({ projects: ["./tsconfig.json"] }),
     tanstackStart({
+      spa: {
+        enabled: true,
+      },
+
       importProtection: {
         behavior: "error",
         client: {
@@ -63,6 +67,7 @@ export default defineConfig(({ command, mode }) => ({
           specifiers: ["server-only"],
         },
       },
+
       server: { entry: "server" },
     }),
     react(),
