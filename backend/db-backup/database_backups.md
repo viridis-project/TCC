@@ -1,0 +1,1 @@
+Para importações, é necessário um banco de dados já criado e selecionado (em uso), pois os exports não possuem CREATE ou USE

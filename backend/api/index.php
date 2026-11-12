@@ -39,6 +39,10 @@ try {
     $method = strtoupper($_SERVER['REQUEST_METHOD']);
     $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) ?: '/';
     $path = '/' . trim($path, '/');
+    // Para o servidor de hospedagem, todas as rotas devem começar com /api/, então adicionamos o prefixo caso não esteja presente
+    if (!str_starts_with($path, '/api/')) {
+        $path = '/api' . ($path === '/' ? '' : $path);
+    }
 
     $route = static function (string $expectedMethod, string $pattern, callable $handler) use ($method, $path): bool {
         if ($method !== $expectedMethod || !preg_match($pattern, $path, $matches)) return false;
