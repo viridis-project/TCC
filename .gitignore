@@ -9,11 +9,25 @@ lerna-debug.log*
 
 node_modules
 backend/.env
+
+# imagens (/uploads)
 backend/uploads/*
 !backend/uploads/.gitkeep
 !backend/uploads/.htaccess
+!backend/uploads/cesta-legumes-bairro.webp
+!backend/uploads/exemplo-foto-horta(2).webp
+!backend/uploads/exemplo-foto-horta.jpeg
+!backend/uploads/kit-jardinagem.jpg
+!backend/uploads/livro-sustentabilidade.avif
+!backend/uploads/muda-arvore.jpg
+!backend/uploads/pa-teste.jpg
+!backend/uploads/padaria-local.webp
+!backend/uploads/workshop-compostagem.webp
+
+# Sessões
 backend/storage/sessions/*
 !backend/storage/sessions/.gitkeep
+
 dist
 dist-ssr
 .output
