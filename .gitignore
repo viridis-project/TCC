@@ -24,6 +24,19 @@ backend/uploads/*
 !backend/uploads/padaria-local.webp
 !backend/uploads/workshop-compostagem.webp
 
+# Imagens publicadas na raiz da API
+backend/api/uploads/*
+!backend/api/uploads/.htaccess
+!backend/api/uploads/cesta-legumes-bairro.webp
+!backend/api/uploads/exemplo-foto-horta(2).webp
+!backend/api/uploads/exemplo-foto-horta.jpeg
+!backend/api/uploads/kit-jardinagem.jpg
+!backend/api/uploads/livro-sustentabilidade.avif
+!backend/api/uploads/muda-arvore.jpg
+!backend/api/uploads/pa-teste.jpg
+!backend/api/uploads/padaria-local.webp
+!backend/api/uploads/workshop-compostagem.webp
+
 # Sessões
 backend/storage/sessions/*
 !backend/storage/sessions/.gitkeep
