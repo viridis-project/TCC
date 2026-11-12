@@ -13,6 +13,7 @@ import {
   History,
   CalendarClock,
   Trophy,
+  Users,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useState } from "react";
@@ -31,6 +32,7 @@ const NAV = [
   { to: "/historico", label: "HISTÓRICO", icon: History },
   { to: "/perfil", label: "PERFIL", icon: User },
   { to: "/admin", label: "ADMINISTRAÇÃO", icon: Settings },
+  { to: "/professor", label: "PAINEL DOCENTE", icon: Users },
   { to: "/diretor", label: "DIREÇÃO", icon: School },
 ] as const;
 
@@ -47,9 +49,16 @@ export function SiteNav() {
       (await apiFetch<{ contagem: number }>("/notificacoes/contagem-nao-lidas")).contagem,
   });
   const visibleNav = NAV.filter((item) => {
-    if (item.to === "/admin") return role === "professor" || role === "admin";
+    if (
+      role === "admin" &&
+      (item.to === "/aprender" || item.to === "/jardim" || item.to === "/horarios")
+    )
+      return false;
+    if (item.to === "/admin") return role === "admin";
+    if (item.to === "/professor") return role === "professor";
     if (item.to === "/diretor") return role === "diretor";
-    if (item.to === "/historico" || item.to === "/recompensas") return role === "aluno";
+    if (item.to === "/historico" || item.to === "/recompensas")
+      return role === "aluno" || role === "admin";
     return true;
   });
 

@@ -84,7 +84,8 @@ try {
     if ($route('POST','#^/api/cronograma$#',fn()=>$ops->schedule('POST',null))) exit;
     if ($route('PUT','#^/api/cronograma/(\d+)$#',fn($id)=>$ops->schedule('PUT',$id))) exit;
     if ($route('DELETE','#^/api/cronograma/(\d+)$#',fn($id)=>$ops->schedule('DELETE',$id))) exit;
-    if ($route('GET','#^/api/admin/dashboard$#',[$ops,'dashboard'])) exit;
+    if ($route('GET','#^/api/admin/dashboard$#',fn()=>$ops->dashboard('app'))) exit;
+    if ($route('GET','#^/api/professor/dashboard$#',fn()=>$ops->dashboard('turma'))) exit;
     if ($route('GET','#^/api/jardim/resumo$#',[$ops,'garden'])) exit;
     if ($route('GET','#^/api/jardim/escolas$#',[$garden,'schools'])) exit;
     if ($route('GET','#^/api/jardim/turmas$#',[$garden,'classes'])) exit;

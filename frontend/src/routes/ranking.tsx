@@ -78,6 +78,9 @@ function RankingPage() {
     );
   }
 
+  const isAdmin = user.perfil_nome === "admin";
+  const visibleTabs = isAdmin ? TABS.filter((tab) => tab.value === "escola") : TABS;
+
   return (
     <PageShell>
       <div className="app-page space-y-6">
@@ -89,22 +92,26 @@ function RankingPage() {
           <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-white/70">
             <Trophy className="h-3.5 w-3.5" /> Ranking Viridis
           </div>
-          <h1 className="mt-1 text-2xl font-bold sm:text-3xl">Quem está liderando a horta</h1>
+          <h1 className="mt-1 text-2xl font-bold sm:text-3xl">
+            {isAdmin ? "Ranking das escolas participantes" : "Quem está liderando a horta"}
+          </h1>
           <p className="mt-1 max-w-md text-sm text-white/80">
-            Cumpra missões, ganhe pontos e suba no ranking da sua turma e da sua escola.
+            {isAdmin
+              ? "Acompanhe a pontuação das escolas com alunos participantes do Viridis."
+              : "Cumpra missões, ganhe pontos e suba no ranking da sua turma e da sua escola."}
           </p>
         </motion.section>
 
-        <Tabs defaultValue="individual" className="space-y-5">
-          <TabsList className="grid h-auto w-full grid-cols-3 sm:w-[26rem]">
-            {TABS.map((tab) => (
+        <Tabs defaultValue={isAdmin ? "escola" : "individual"} className="space-y-5">
+          <TabsList className={isAdmin ? "grid h-auto w-full grid-cols-1 sm:w-[26rem]" : "grid h-auto w-full grid-cols-3 sm:w-[26rem]"}>
+            {visibleTabs.map((tab) => (
               <TabsTrigger key={tab.value} value={tab.value} className="py-2.5 text-xs sm:text-sm">
                 {tab.label}
               </TabsTrigger>
             ))}
           </TabsList>
 
-          {TABS.map((tab) => (
+          {visibleTabs.map((tab) => (
             <TabsContent key={tab.value} value={tab.value} className="space-y-4">
               <RankingList rankingType={tab.value} user={user} />
             </TabsContent>

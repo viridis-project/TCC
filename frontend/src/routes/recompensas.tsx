@@ -46,6 +46,7 @@ function RewardsPage() {
     },
   });
   const points = Number(user?.pontos_totais ?? 0);
+  const canRedeem = user?.perfil_nome === "aluno";
   if (loadingUser || isLoading)
     return (
       <PageShell>
@@ -81,10 +82,10 @@ function RewardsPage() {
                 Cada ponto cultivado vira impacto real na sua comunidade.
               </p>
             </div>
-            <div className="shrink-0 rounded-lg border border-white/20 bg-white/10 px-5 py-3 text-right backdrop-blur-sm">
+            {canRedeem && <div className="shrink-0 rounded-lg border border-white/20 bg-white/10 px-5 py-3 text-right backdrop-blur-sm">
               <div className="text-[11px] uppercase tracking-wide text-white/70">Seus pontos</div>
               <div className="text-2xl font-bold">{points.toLocaleString("pt-BR")}</div>
-            </div>
+            </div>}
           </div>
         </motion.section>
 
@@ -94,7 +95,8 @@ function RewardsPage() {
           icon={Building2}
           rewards={rewards.filter((reward) => reward.scope === "escola")}
           points={points}
-          onSelect={setSelected}
+          canRedeem={canRedeem}
+          onSelect={canRedeem ? setSelected : () => {}}
         />
         <RewardSection
           title="Recompensas gerais"
@@ -102,23 +104,26 @@ function RewardsPage() {
           icon={Globe2}
           rewards={rewards.filter((reward) => reward.scope !== "escola")}
           points={points}
-          onSelect={setSelected}
+          canRedeem={canRedeem}
+          onSelect={canRedeem ? setSelected : () => {}}
         />
       </div>
 
-      <RedeemRewardModal
-        reward={selected}
-        userPoints={points}
-        onOpenChange={(v) => !v && setSelected(null)}
-        onConfirm={async (reward) => {
-          await apiFetch("/resgates", {
-            method: "POST",
-            body: JSON.stringify({ recompensa_id: reward.id }),
-          });
-          await queryClient.invalidateQueries({ queryKey: ["historico"] });
-          await queryClient.invalidateQueries({ queryKey: ["perfil"] });
-        }}
-      />
+      {canRedeem && (
+        <RedeemRewardModal
+          reward={selected}
+          userPoints={points}
+          onOpenChange={(v) => !v && setSelected(null)}
+          onConfirm={async (reward) => {
+            await apiFetch("/resgates", {
+              method: "POST",
+              body: JSON.stringify({ recompensa_id: reward.id }),
+            });
+            await queryClient.invalidateQueries({ queryKey: ["historico"] });
+            await queryClient.invalidateQueries({ queryKey: ["perfil"] });
+          }}
+        />
+      )}
     </PageShell>
   );
 }
@@ -129,6 +134,7 @@ function RewardSection({
   icon: Icon,
   rewards,
   points,
+  canRedeem,
   onSelect,
 }: {
   title: string;
@@ -136,6 +142,7 @@ function RewardSection({
   icon: typeof Building2;
   rewards: Reward[];
   points: number;
+  canRedeem: boolean;
   onSelect: (reward: Reward) => void;
 }) {
   return (
@@ -207,11 +214,11 @@ function RewardSection({
                       <Sparkles className="h-3.5 w-3.5" /> {r.points} pts
                     </div>
                     <button
-                      disabled={!can}
+                      disabled={!can || !canRedeem}
                       onClick={() => onSelect(r)}
                       className="min-h-11 rounded-lg bg-primary px-4 py-2 text-xs font-bold uppercase tracking-wider text-primary-foreground shadow-soft transition-all hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none"
                     >
-                      {can ? "Resgatar" : "Pontos insuficientes"}
+                      {!canRedeem ? "Resgate para alunos" : can ? "Resgatar" : "Pontos insuficientes"}
                     </button>
                   </div>
                 </div>
