@@ -1,4 +1,5 @@
 RewriteEngine On
+RewriteRule ^uploads/([A-Za-z0-9._()-]+)$ serve-upload.php?file=$1 [QSA,L]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^ index.php [QSA,L]
