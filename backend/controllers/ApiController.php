@@ -308,7 +308,9 @@ final class ApiController extends Controller
 
     public function ranking(): never
     {
-        $user=$this->auth->user(); $type=$_GET['tipo']??'individual';$params=[];
+        $user=$this->auth->user();
+        $type=$user['perfil_nome']==='admin'?'escola':($_GET['tipo']??'individual');
+        $params=[];
         if ($type==='individual') $sql="SELECT u.id,u.nome,u.username,u.avatar,t.id turma_id,t.nome turma,u.pontos_totais pontos,
           i.id instituicao_id,i.nome instituicao_nome FROM usuario u JOIN perfil p ON p.id=u.perfil_id
           LEFT JOIN turma_escolar t ON t.id=u.turma_id LEFT JOIN instituicao i ON i.id=t.instituicao_id

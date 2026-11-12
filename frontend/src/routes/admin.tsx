@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "motion/react";
 import {
@@ -38,7 +38,7 @@ export const Route = createFileRoute("/admin")({
 type Dashboard = {
   pendencias: number;
   ranking_turmas: { nome: string; pontos: number }[];
-  progresso_semanal: { semana: string; valor: number; aprovacoes: number }[];
+  progresso_semanal: { semana: string | number; valor: number; aprovacoes: number }[];
 };
 type Submission = {
   id: number;
@@ -72,17 +72,40 @@ function Card({ children }: { children: React.ReactNode }) {
 }
 
 function AdminPage() {
+  return <OperationalPage panel="admin" />;
+}
+
+export function OperationalPage({ panel }: { panel: "admin" | "professor" }) {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const { data: user, isLoading: loadingUser, error: userError } = useQuery(userQuery());
+  useEffect(() => {
+    if (!user) return;
+    if (panel === "admin" && user.perfil_nome === "professor")
+      void navigate({ to: "/professor", replace: true });
+    else if (panel === "admin" && user.perfil_nome === "diretor")
+      void navigate({ to: "/diretor", replace: true });
+    else if (panel === "admin" && user.perfil_nome === "aluno")
+      void navigate({ to: "/aprender", replace: true });
+    else if (panel === "professor" && user.perfil_nome === "admin")
+      void navigate({ to: "/admin", replace: true });
+    else if (panel === "professor" && user.perfil_nome === "diretor")
+      void navigate({ to: "/diretor", replace: true });
+    else if (panel === "professor" && user.perfil_nome === "aluno")
+      void navigate({ to: "/aprender", replace: true });
+  }, [navigate, panel, user]);
   const [review, setReview] = useState<PendingItem | null>(null);
   const [openPartner, setOpenPartner] = useState(false);
   const { data, isLoading, error } = useQuery({
     queryKey: ["admin", user?.perfil_nome],
-    enabled: isBrowser && !!user,
+    enabled:
+      isBrowser &&
+      !!user &&
+      (panel === "admin" ? user.perfil_nome === "admin" : user.perfil_nome === "professor"),
     retry: false,
     queryFn: async () => {
       const [dashboard, submissions] = await Promise.all([
-        apiFetch<Dashboard>("/admin/dashboard"),
+        apiFetch<Dashboard>(panel === "admin" ? "/admin/dashboard" : "/professor/dashboard"),
         apiFetch<{ submissoes: Submission[] }>("/submissoes?status=pending"),
       ]);
       let partners: Partner[] = [];
@@ -145,7 +168,10 @@ function AdminPage() {
     points: Number(c.pontos),
   }));
   const weekly = data.dashboard.progresso_semanal.map((w) => ({
-    week: w.semana,
+    week: (() => {
+      const value = String(w.semana);
+      return value.length === 6 ? `${value.slice(0, 4)}-S${value.slice(4)}` : value;
+    })(),
     value: Number(w.valor),
   }));
   const totalPoints = classes.reduce((sum, c) => sum + c.points, 0);
@@ -154,7 +180,7 @@ function AdminPage() {
     <PageShell>
       <div className="app-page space-y-6">
         <div className="page-heading">
-          <div className="page-eyebrow">Painel do Professor / Administrador</div>
+          <div className="page-eyebrow">{panel === "admin" ? "Painel do Administrador" : "Painel do Professor"}</div>
           <h1 className="page-title">Gestão e visão institucional</h1>
           <p className="page-description">Dados atualizados diretamente do banco Viridis.</p>
         </div>

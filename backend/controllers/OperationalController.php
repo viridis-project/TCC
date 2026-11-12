@@ -41,15 +41,15 @@ final class OperationalController extends Controller
         $this->json(['erro'=>'Método não permitido'],405);
     }
 
-    public function dashboard(): never
+    public function dashboard(string $scope = 'app'): never
     {
-        $user=$this->auth->user(['professor','admin']);
+        $user=$this->auth->user($scope === 'app' ? ['admin'] : ['professor']);
         $institution=(int)($user['instituicao_id']??0);
         $pending=$this->db->prepare("SELECT COUNT(*) FROM submissao_missao s JOIN usuario u ON u.id=s.aluno_id WHERE s.status='pending' AND (?=0 OR u.instituicao_id=?)");
         $pending->execute([$institution,$institution]);
         $classes=$this->db->prepare("SELECT t.nome,SUM(u.pontos_totais) pontos FROM usuario u JOIN perfil p ON p.id=u.perfil_id JOIN turma_escolar t ON t.id=u.turma_id WHERE p.nome='aluno' AND (?=0 OR t.instituicao_id=?) GROUP BY t.id,t.nome ORDER BY pontos DESC");
         $classes->execute([$institution,$institution]);
-        $weekly=$this->db->prepare("SELECT DATE_FORMAT(s.revisado_em,'%x-S%v') semana,SUM(m.pontos_recompensa) valor,COUNT(*) aprovacoes FROM submissao_missao s JOIN missao m ON m.id=s.missao_id JOIN usuario u ON u.id=s.aluno_id WHERE s.status='approved' AND s.revisado_em>=DATE_SUB(CURDATE(),INTERVAL 8 WEEK) AND (?=0 OR u.instituicao_id=?) GROUP BY YEARWEEK(s.revisado_em,1) ORDER BY YEARWEEK(s.revisado_em,1)");
+        $weekly=$this->db->prepare("SELECT YEARWEEK(s.revisado_em,1) semana,SUM(m.pontos_recompensa) valor,COUNT(*) aprovacoes FROM submissao_missao s JOIN missao m ON m.id=s.missao_id JOIN usuario u ON u.id=s.aluno_id WHERE s.status='approved' AND s.revisado_em>=DATE_SUB(CURDATE(),INTERVAL 8 WEEK) AND (?=0 OR u.instituicao_id=?) GROUP BY YEARWEEK(s.revisado_em,1) ORDER BY YEARWEEK(s.revisado_em,1)");
         $weekly->execute([$institution,$institution]);
         $this->json(['pendencias'=>(int)$pending->fetchColumn(),'ranking_turmas'=>$classes->fetchAll(),'progresso_semanal'=>$weekly->fetchAll()]);
     }

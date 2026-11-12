@@ -30,7 +30,15 @@ function LoginPage() {
       });
       queryClient.setQueryData(["perfil"], result.usuario);
       toast.success(result.mensagem);
-      await navigate({ to: result.usuario.perfil_nome === "aluno" ? "/aprender" : "/admin" });
+      const destino =
+        result.usuario.perfil_nome === "aluno"
+          ? "/aprender"
+          : result.usuario.perfil_nome === "professor"
+            ? "/professor"
+            : result.usuario.perfil_nome === "diretor"
+              ? "/diretor"
+              : "/admin";
+      await navigate({ to: destino });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Não foi possível entrar");
     } finally {
