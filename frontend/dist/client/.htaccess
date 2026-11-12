@@ -1,0 +1,14 @@
+Options -MultiViews
+Options -Indexes
+
+DirectoryIndex _shell.html
+
+RewriteEngine On
+
+# Preserva arquivos e diret¨®rios existentes
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Encaminha as demais rotas para o shell
+RewriteRule ^ _shell.html [L]

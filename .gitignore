@@ -28,8 +28,6 @@ backend/uploads/*
 backend/storage/sessions/*
 !backend/storage/sessions/.gitkeep
 
-dist
-dist-ssr
 .output
 .vinxi
 .tanstack/**
@@ -54,3 +52,4 @@ dist-ssr
 # .env files
 .env
 .env.production
+.env.development
