@@ -13,10 +13,10 @@ import {
   Play,
   Rocket,
   Trophy,
-  Medal,
   Flame,
 } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
+import { GardenAchievements, type Achievement } from "@/components/garden-achievements";
 import { SubmitProofModal, type ProofTarget } from "@/components/modals/submit-proof-modal";
 import { StaffGarden } from "@/components/staff-garden";
 import {
@@ -156,13 +156,7 @@ function StudentGardenPage() {
             atividades_por_tipo: Record<string, number>;
           };
           crescimento: { mes: string; valor: number }[];
-          conquistas: {
-            id: number;
-            titulo: string;
-            descricao: string;
-            icone: string;
-            conquistada: number;
-          }[];
+          conquistas: Achievement[];
         }>("/jardim/resumo"),
         apiFetch<{ modulos: ApiModule[] }>("/modulos"),
         apiFetch<UserHistory>("/historico"),
@@ -263,12 +257,6 @@ function StudentGardenPage() {
   const recentPlantings = [...data.history.envios]
     .sort((a, b) => plantingTimestamp(b.data_envio) - plantingTimestamp(a.data_envio))
     .slice(0, 3);
-  const achievements = data.garden.conquistas.map((a) => ({
-    id: a.id,
-    title: a.titulo,
-    description: a.descricao,
-    earned: Boolean(a.conquistada),
-  }));
   return (
     <PageShell>
       <div className="app-page space-y-6">
@@ -669,46 +657,7 @@ function StudentGardenPage() {
           </Card>
         </div>
 
-        {/* Conquistas */}
-        <Card>
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-bold uppercase tracking-wide text-foreground">
-              Conquistas
-            </h2>
-            <span className="text-xs font-bold text-muted-foreground">
-              {achievements.filter((a) => a.earned).length}/{achievements.length}
-            </span>
-          </div>
-          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-            {achievements.map((a, i) => (
-              <motion.div
-                key={a.id}
-                initial={{ opacity: 0, scale: 0.9 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.05 }}
-                whileHover={{ y: -1 }}
-                className={`flex flex-col items-center gap-2 rounded-lg border p-4 text-center ${
-                  a.earned
-                    ? "border-success/40 bg-success/10"
-                    : "border-border/60 bg-muted/40 opacity-60"
-                }`}
-              >
-                <div
-                  className={`grid h-12 w-12 place-items-center rounded-full ${
-                    a.earned
-                      ? "bg-success text-success-foreground"
-                      : "bg-muted text-muted-foreground"
-                  }`}
-                >
-                  <Medal className="h-6 w-6" />
-                </div>
-                <div className="text-xs font-bold text-foreground">{a.title}</div>
-                <div className="text-[10px] text-muted-foreground">{a.description}</div>
-              </motion.div>
-            ))}
-          </div>
-        </Card>
+        <GardenAchievements achievements={data.garden.conquistas} />
       </div>
 
       <SubmitProofModal

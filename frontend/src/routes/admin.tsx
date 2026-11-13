@@ -29,6 +29,7 @@ import { toast } from "sonner";
 import { ReviewActivityModal, type PendingItem } from "@/components/modals/review-activity-modal";
 import { AddPartnerModal } from "@/components/modals/add-partner-modal";
 import { RewardManagement } from "@/components/reward-management";
+import { AchievementManagement } from "@/components/achievement-management";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({ meta: [{ title: "Administração — Viridis" }] }),
@@ -180,7 +181,9 @@ export function OperationalPage({ panel }: { panel: "admin" | "professor" }) {
     <PageShell>
       <div className="app-page space-y-6">
         <div className="page-heading">
-          <div className="page-eyebrow">{panel === "admin" ? "Painel do Administrador" : "Painel do Professor"}</div>
+          <div className="page-eyebrow">
+            {panel === "admin" ? "Painel do Administrador" : "Painel do Professor"}
+          </div>
           <h1 className="page-title">Gestão e visão institucional</h1>
           <p className="page-description">Dados atualizados diretamente do banco Viridis.</p>
         </div>
@@ -337,6 +340,7 @@ export function OperationalPage({ panel }: { panel: "admin" | "professor" }) {
             </div>
           </Card>
         )}
+        {user?.perfil_nome === "admin" && <AchievementManagement />}
         {user?.perfil_nome === "admin" && (
           <RewardManagement endpoint="/admin/recompensas" title="Recompensas gerais do app" />
         )}

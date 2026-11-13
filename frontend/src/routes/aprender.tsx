@@ -538,6 +538,9 @@ function LearnPage() {
           setQuizLesson(null);
           void queryClient.invalidateQueries({ queryKey: ["perfil"] });
           void queryClient.invalidateQueries({ queryKey: ["modulos"] });
+          void queryClient.invalidateQueries({ queryKey: ["jardim"] });
+          void queryClient.invalidateQueries({ queryKey: ["notificacoes"] });
+          void queryClient.invalidateQueries({ queryKey: ["notificacoes-contagem"] });
           setTimeout(() => setCelebrate(xp), 250);
         }}
       />

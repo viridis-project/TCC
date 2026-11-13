@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Viridis\config\Database;
 use Viridis\controllers\ApiController;
+use Viridis\controllers\AchievementController;
 use Viridis\controllers\AuthController;
 use Viridis\controllers\ConviteProfessorController;
 use Viridis\controllers\DirectorController;
@@ -27,6 +28,7 @@ try {
     $db = Database::connection($config);
     $auth = new AuthMiddleware($db);
     $api = new ApiController($db, $auth, $config);
+    $achievements = new AchievementController($db, $auth);
     $ops = new OperationalController($db, $auth);
     $garden = new GardenController($db, $auth);
     $learning = new LearningController($db, $auth);
@@ -85,6 +87,8 @@ try {
     if ($route('PUT','#^/api/cronograma/(\d+)$#',fn($id)=>$ops->schedule('PUT',$id))) exit;
     if ($route('DELETE','#^/api/cronograma/(\d+)$#',fn($id)=>$ops->schedule('DELETE',$id))) exit;
     if ($route('GET','#^/api/admin/dashboard$#',fn()=>$ops->dashboard('app'))) exit;
+    if ($route('GET','#^/api/admin/conquistas$#',fn()=>$achievements->manage('GET'))) exit;
+    if ($route('POST','#^/api/admin/conquistas$#',fn()=>$achievements->manage('POST'))) exit;
     if ($route('GET','#^/api/professor/dashboard$#',fn()=>$ops->dashboard('turma'))) exit;
     if ($route('GET','#^/api/jardim/resumo$#',[$ops,'garden'])) exit;
     if ($route('GET','#^/api/jardim/escolas$#',[$garden,'schools'])) exit;

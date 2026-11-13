@@ -70,6 +70,9 @@ export function NotificationsModal({
     } else if (item.link === "/horarios") {
       onOpenChange(false);
       await navigate({ to: "/horarios" });
+    } else if (item.link === "/jardim#conquistas") {
+      onOpenChange(false);
+      await navigate({ to: "/jardim", hash: "conquistas" });
     } else if (item.link === "/jardim") {
       onOpenChange(false);
       await navigate({ to: "/jardim" });

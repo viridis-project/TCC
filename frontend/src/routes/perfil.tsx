@@ -2,7 +2,19 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "motion/react";
-import { ArrowLeft, User, Mail, Phone, Users, Bell, Sun, Save, LogOut, Camera } from "lucide-react";
+import {
+  ArrowLeft,
+  User,
+  Mail,
+  Phone,
+  Users,
+  Bell,
+  Sun,
+  Save,
+  LogOut,
+  Camera,
+  Medal,
+} from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { apiFetch, userQuery } from "@/lib/api";
 import { toast } from "sonner";
@@ -125,6 +137,15 @@ function ProfilePage() {
           <div className="mt-2 text-xs text-muted-foreground">
             Nível {user.nivel} · {user.pontos_totais} pontos · {user.xp} XP
           </div>
+          {user.perfil_nome === "aluno" && (
+            <Link
+              to="/jardim"
+              hash="conquistas"
+              className="mt-2 inline-flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm font-semibold text-primary transition-colors hover:bg-primary/10 focus-visible:outline-2 focus-visible:outline-ring"
+            >
+              <Medal aria-hidden="true" className="size-4" /> Ver minhas conquistas
+            </Link>
+          )}
         </div>
 
         <form

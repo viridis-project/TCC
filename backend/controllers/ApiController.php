@@ -9,6 +9,7 @@ use PDO;
 use Throwable;
 use Viridis\middleware\AuthMiddleware;
 use Viridis\models\Usuario;
+use Viridis\services\Achievements;
 use Viridis\services\LearningAccess;
 use Viridis\services\LearningException;
 
@@ -73,6 +74,9 @@ final class ApiController extends Controller
             // Serialize with publication/editor changes and reject lessons outside the user's audience.
             $courseLock=$this->db->prepare('SELECT c.id FROM curso c JOIN modulo m ON m.curso_id=c.id JOIN licao l ON l.modulo_id=m.id WHERE l.id=? FOR UPDATE');
             $courseLock->execute([$lessonId]);
+            // Serialize completions in different courses before reading the student's progress.
+            $studentLock = $this->db->prepare('SELECT id FROM usuario WHERE id=? FOR UPDATE');
+            $studentLock->execute([(int)$user['id']]);
             (new LearningAccess($this->db))->playableLesson($user,$lessonId);
             $lesson = $this->db->prepare('SELECT id,xp FROM licao WHERE id=? FOR UPDATE');
             $lesson->execute([$lessonId]);
@@ -119,7 +123,7 @@ final class ApiController extends Controller
                      ultima_atividade_em=CURDATE() WHERE id=?'
                 );
                 $update->execute([$xp,$points,$xp,$xp,(int)$user['id']]);
-                $this->checkAchievements((int)$user['id']);
+                (new Achievements($this->db))->sync((int)$user['id']);
             }
             $this->db->commit();
             $this->json(['mensagem'=>'Quiz concluído!','acertos'=>$correct,'total'=>count($answers),'xp_ganho'=>$xp,'pontos_ganhos'=>$alreadyCompleted?0:$points,'ja_concluida'=>$alreadyCompleted]);
@@ -259,10 +263,14 @@ final class ApiController extends Controller
             $credited=0;
             if ($status==='approved') {
                 $credited=(int)$submission['pontos_recompensa'];
-                $points=$this->db->prepare('UPDATE usuario SET pontos_totais=pontos_totais+?, ultima_atividade_em=CURDATE() WHERE id=?');
+                $points=$this->db->prepare('UPDATE usuario SET pontos_totais=pontos_totais+? WHERE id=?');
+                $achievements = new Achievements($this->db);
+                sort($members);
                 foreach ($members as $memberId) {
                     $points->execute([$credited,$memberId]);
-                    $this->checkAchievements($memberId);
+                }
+                foreach ($members as $memberId) {
+                    $achievements->sync($memberId);
                 }
                 if ($groupId !== null) {
                     $this->db->prepare("UPDATE agenda SET status='concluido' WHERE missao_id=? AND grupo_id=? AND status='agendado'")->execute([(int)$submission['missao_id'],$groupId]);
@@ -314,7 +322,7 @@ final class ApiController extends Controller
         if ($type==='individual') $sql="SELECT u.id,u.nome,u.username,u.avatar,t.id turma_id,t.nome turma,u.pontos_totais pontos,
           i.id instituicao_id,i.nome instituicao_nome FROM usuario u JOIN perfil p ON p.id=u.perfil_id
           LEFT JOIN turma_escolar t ON t.id=u.turma_id LEFT JOIN instituicao i ON i.id=t.instituicao_id
-          WHERE p.nome='aluno' ORDER BY u.pontos_totais DESC,u.nome LIMIT 100";
+          WHERE p.nome='aluno' ORDER BY ".Achievements::RANKING_ORDER." LIMIT 100";
         elseif ($type==='turma') {
             $sql="SELECT t.id turma_id,t.nome,t.instituicao_id,i.nome instituicao_nome,SUM(u.pontos_totais) pontos,COUNT(u.id) alunos
               FROM turma_escolar t JOIN instituicao i ON i.id=t.instituicao_id
@@ -329,6 +337,7 @@ final class ApiController extends Controller
         else $this->json(['erro'=>'Tipo de ranking inválido'],422);
         $stmt=$this->db->prepare($sql); $stmt->execute($params); $rows=$stmt->fetchAll();
         foreach ($rows as $i=>&$row) $row['posicao']=$i+1;
+        unset($row);
         $position=null;if($type==='individual')foreach($rows as $row)if((int)$row['id']===(int)$user['id']){$position=(int)$row['posicao'];break;}
         $this->json(['tipo'=>$type,'ranking'=>$rows,'contexto_usuario'=>[
           'usuario_id'=>(int)$user['id'],'posicao'=>$position,'turma_id'=>isset($user['turma_id'])?(int)$user['turma_id']:null,
@@ -336,19 +345,4 @@ final class ApiController extends Controller
         ]]);
     }
 
-    private function checkAchievements(int $userId): void
-    {
-        $u=$this->db->prepare('SELECT u.id,u.turma_id,COALESCE(t.instituicao_id,u.instituicao_id) instituicao_id FROM usuario u LEFT JOIN turma_escolar t ON t.id=u.turma_id WHERE u.id=?');$u->execute([$userId]);
-        $modules=(new LearningAccess($this->db))->modules($u->fetch());
-        $stmt=$this->db->prepare('SELECT id,regra FROM conquista'); $stmt->execute();
-        $insert=$this->db->prepare('INSERT IGNORE INTO usuario_conquista (usuario_id,conquista_id) VALUES (?,?)');
-        foreach ($stmt->fetchAll() as $achievement) {
-            $earned=false; $rule=$achievement['regra'];
-            if ($rule==='licoes:1') { $q=$this->db->prepare("SELECT COUNT(*) FROM usuario_licao_progresso WHERE usuario_id=? AND status='completed'"); $q->execute([$userId]); $earned=(int)$q->fetchColumn()>=1; }
-            elseif (str_starts_with($rule,'streak:')) { $q=$this->db->prepare('SELECT streak_dias FROM usuario WHERE id=?'); $q->execute([$userId]); $earned=(int)$q->fetchColumn()>=(int)substr($rule,7); }
-            elseif (str_starts_with($rule,'modulo_completo:')) { $earned=count(array_filter($modules,fn($m)=>$m['ordem']===(int)substr($rule,16) && $m['progresso']===100))>0; }
-            elseif ($rule==='todos_modulos') { $earned=count($modules)>0 && count(array_filter($modules,fn($m)=>$m['progresso']===100))===count($modules); }
-            if ($earned) $insert->execute([$userId,(int)$achievement['id']]);
-        }
-    }
 }

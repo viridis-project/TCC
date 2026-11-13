@@ -14,7 +14,7 @@ if (($argv[1]??'')==='--case') {
         'instituicao (id INTEGER PRIMARY KEY,nome VARCHAR(100))',
         'turma_escolar (id INTEGER PRIMARY KEY,nome VARCHAR(100),ano_letivo INTEGER,instituicao_id INTEGER)',
         'turma_professor (turma_id INTEGER,professor_id INTEGER)',
-        'usuario (id INTEGER PRIMARY KEY,nome VARCHAR(100),perfil_id INTEGER,turma_id INTEGER,instituicao_id INTEGER,xp INTEGER DEFAULT 0,pontos_totais INTEGER DEFAULT 0,nivel INTEGER DEFAULT 1,xp_proximo_nivel INTEGER DEFAULT 200,streak_dias INTEGER DEFAULT 0,ultima_atividade_em DATE NULL)',
+        'usuario (id INTEGER PRIMARY KEY,nome VARCHAR(100),perfil_id INTEGER,turma_id INTEGER,instituicao_id INTEGER,xp INTEGER DEFAULT 0,pontos_totais INTEGER DEFAULT 0,nivel INTEGER DEFAULT 1,xp_proximo_nivel INTEGER DEFAULT 200,streak_dias INTEGER DEFAULT 0,ultima_atividade_em DATE NULL,notificacoes_ativas INTEGER DEFAULT 1)',
         "curso (id INTEGER PRIMARY KEY,titulo VARCHAR(150),descricao VARCHAR(1000) DEFAULT '',escopo VARCHAR(10),instituicao_id INTEGER NULL,turma_id INTEGER NULL,criador_id INTEGER NULL,publicado INTEGER DEFAULT 0,ativo INTEGER DEFAULT 1,criado_em DATETIME DEFAULT CURRENT_TIMESTAMP)",
         "modulo (id INTEGER PRIMARY KEY,curso_id INTEGER,titulo VARCHAR(100),descricao VARCHAR(255) DEFAULT '',cor VARCHAR(50) DEFAULT '#16803c',ordem INTEGER DEFAULT 1,ativo INTEGER DEFAULT 1)",
         "licao (id INTEGER PRIMARY KEY,modulo_id INTEGER,titulo VARCHAR(120),kind VARCHAR(20) DEFAULT 'lesson',xp INTEGER DEFAULT 20,ordem INTEGER DEFAULT 1,ativo INTEGER DEFAULT 1)",
@@ -22,8 +22,9 @@ if (($argv[1]??'')==='--case') {
         'opcao_quiz (id INTEGER PRIMARY KEY,pergunta_id INTEGER,texto_opcao VARCHAR(255),is_correta INTEGER)',
         'usuario_licao_progresso (usuario_id INTEGER,licao_id INTEGER,status VARCHAR(20),concluida_em DATETIME NULL,PRIMARY KEY(usuario_id,licao_id))',
         'progresso_quiz (id INTEGER PRIMARY KEY,aluno_id INTEGER,pergunta_id INTEGER,acertou INTEGER)',
-        'conquista (id INTEGER PRIMARY KEY,regra VARCHAR(100))',
-        'usuario_conquista (usuario_id INTEGER,conquista_id INTEGER,PRIMARY KEY(usuario_id,conquista_id))',
+        'conquista (id INTEGER PRIMARY KEY,titulo VARCHAR(100),descricao VARCHAR(255),icone VARCHAR(50),regra VARCHAR(100))',
+        'usuario_conquista (usuario_id INTEGER,conquista_id INTEGER,conquistada_em DATETIME NOT NULL,PRIMARY KEY(usuario_id,conquista_id))',
+        'notificacao (usuario_id INTEGER,tipo VARCHAR(40),titulo VARCHAR(120),mensagem VARCHAR(500),link VARCHAR(120))',
     ];
     foreach ($schema as $definition) $db->exec('CREATE '.($mysql?'TEMPORARY ':'').'TABLE '.($mysql?str_replace('INTEGER PRIMARY KEY,','INTEGER PRIMARY KEY AUTO_INCREMENT,',$definition):$definition));
     $db->exec("INSERT INTO perfil VALUES (1,'aluno'),(2,'professor'),(3,'diretor'),(4,'admin');");
@@ -52,13 +53,29 @@ if (($argv[1]??'')==='--case') {
     $auth=new Viridis\middleware\AuthMiddleware($db);
     try {
         if (($case['controller']??'learning')==='api') { $controller=new Viridis\controllers\ApiController($db,$auth,[]);$controller->{$case['action']}(...($case['args']??[])); }
+        elseif (($case['controller']??'learning')==='achievement') { $controller=new Viridis\controllers\AchievementController($db,$auth);$controller->{$case['action']}(...($case['args']??[])); }
+        elseif ($case['action']==='achievements') {
+            $student=$auth->user(['aluno']);
+            $achievements=new Viridis\services\Achievements($db);
+            $achievements->sync((int)$student['id']);
+            echo json_encode(['conquistas'=>$achievements->sync((int)$student['id'])]);exit;
+        }
         elseif ($case['action']==='modules') { echo json_encode(['modulos'=>(new Viridis\services\LearningAccess($db))->modules($auth->user())]);exit; }
         else { $controller=new Viridis\controllers\LearningController($db,$auth);$controller->{$case['action']}(...($case['args']??[])); }
     } catch (Viridis\services\LearningException $e) { http_response_code($e->getCode());echo json_encode(['erro'=>$e->getMessage()]);exit; }
 }
 
 $question=['licao_id'=>3,'texto_pergunta'=>'Qual pratica economiza agua?','explicacao'=>'Regar no horario adequado.','pontos_recompensa'=>5,'opcoes'=>[['texto_opcao'=>'Regar cedo','is_correta'=>true],['texto_opcao'=>'Desperdicar agua','is_correta'=>false],['texto_opcao'=>'Ignorar as plantas','is_correta'=>false],['texto_opcao'=>'Regar sem parar','is_correta'=>false]]];
+$achievementSeed="INSERT INTO conquista VALUES (1,'Primeira Semente','','Sprout','licoes:1'),(2,'Compostador','','Recycle','modulo_completo:2'),(3,'Sequencia de 7 dias','','Flame','streak:7'),(4,'Conhecedor de Pragas','','Bug','modulo_completo:3'),(5,'Mestre Jardineiro','','Trophy','todos_modulos'),(6,'Top 3 Ranking','','Medal','ranking:3')";
+$unlocked=fn($r)=>array_column(array_filter($r['body']['conquistas'],fn($a)=>$a['conquistada']===1),'id');
 $cases=[
+    ['Admin lists achievements and published global modules',['mysql'=>true,'user'=>300,'controller'=>'achievement','action'=>'manage','args'=>['GET']],200,fn($r)=>$r['body']['conquistas']===[] && array_column($r['body']['modulos'],'id')===[1]],
+    ['Teacher cannot manage achievements',['mysql'=>true,'user'=>100,'controller'=>'achievement','action'=>'manage','args'=>['POST'],'data'=>['titulo'=>'Leitor','descricao'=>'Concluiu cinco licoes','icone'=>'BookOpen','tipo_regra'=>'licoes','meta'=>5]],403],
+    ['Admin creates lesson achievement',['mysql'=>true,'user'=>300,'controller'=>'achievement','action'=>'manage','args'=>['POST'],'data'=>['titulo'=>'Leitor','descricao'=>'Concluiu cinco licoes','icone'=>'BookOpen','tipo_regra'=>'licoes','meta'=>5],'inspect'=>['achievement'=>'SELECT titulo,descricao,icone,regra FROM conquista']],201,fn($r)=>$r['inspect']['achievement']===[['titulo'=>'Leitor','descricao'=>'Concluiu cinco licoes','icone'=>'BookOpen','regra'=>'licoes:5']]],
+    ['Admin cannot duplicate achievement rule',['mysql'=>true,'user'=>300,'controller'=>'achievement','action'=>'manage','args'=>['POST'],'data'=>['titulo'=>'Outro leitor','descricao'=>'Tambem concluiu cinco licoes','icone'=>'Star','tipo_regra'=>'licoes','meta'=>5],'setup'=>["INSERT INTO conquista (titulo,descricao,icone,regra) VALUES ('Leitor','Concluiu cinco licoes','BookOpen','licoes:5')"]],409],
+    ['Achievement rejects invalid icon',['mysql'=>true,'user'=>300,'controller'=>'achievement','action'=>'manage','args'=>['POST'],'data'=>['titulo'=>'Leitor','descricao'=>'Concluiu cinco licoes','icone'=>'Emoji','tipo_regra'=>'licoes','meta'=>5]],422],
+    ['Module achievement accepts only published global module',['mysql'=>true,'user'=>300,'controller'=>'achievement','action'=>'manage','args'=>['POST'],'data'=>['titulo'=>'Modulo escolar','descricao'=>'Concluiu modulo escolar','icone'=>'Award','tipo_regra'=>'modulo_completo','meta'=>2]],422],
+    ['Admin creates global module achievement',['mysql'=>true,'user'=>300,'controller'=>'achievement','action'=>'manage','args'=>['POST'],'data'=>['titulo'=>'Modulo global','descricao'=>'Concluiu modulo global','icone'=>'Award','tipo_regra'=>'modulo_completo','meta'=>1],'inspect'=>['rule'=>'SELECT regra FROM conquista']],201,fn($r)=>$r['inspect']['rule'][0]['regra']==='modulo_completo:1'],
     ['Admin manages global only',['user'=>300,'action'=>'courses'],200,fn($r)=>array_column($r['body']['cursos'],'id')===[8,1]],
     ['Director manages own school',['user'=>200,'action'=>'courses'],200,fn($r)=>array_column($r['body']['cursos'],'id')===[2]],
     ['Teacher manages own courses in assigned classes',['user'=>100,'action'=>'courses'],200,fn($r)=>array_column($r['body']['cursos'],'id')===[4,3] && count($r['body']['turmas'])===2],
@@ -96,6 +113,10 @@ $cases=[
     ['Scoring rejects another lesson question',['mysql'=>true,'user'=>400,'controller'=>'api','action'=>'submitQuiz','args'=>[1],'data'=>['respostas'=>[['pergunta_id'=>2,'opcao_id'=>21]]]],422],
     ['Scoring credits once',['mysql'=>true,'user'=>400,'controller'=>'api','action'=>'submitQuiz','args'=>[1],'data'=>['respostas'=>[['pergunta_id'=>1,'opcao_id'=>11]]],'inspect'=>['user'=>'SELECT xp,pontos_totais FROM usuario WHERE id=400']],200,fn($r)=>(int)$r['inspect']['user'][0]['xp']===20 && (int)$r['inspect']['user'][0]['pontos_totais']===5],
     ['Repeated quiz gives no extra points',['mysql'=>true,'user'=>400,'controller'=>'api','action'=>'submitQuiz','args'=>[1],'data'=>['respostas'=>[['pergunta_id'=>1,'opcao_id'=>11]]],'setup'=>["INSERT INTO usuario_licao_progresso VALUES (400,1,'completed',NULL)",'UPDATE usuario SET xp=20,pontos_totais=5 WHERE id=400'],'inspect'=>['user'=>'SELECT xp,pontos_totais FROM usuario WHERE id=400']],200,fn($r)=>$r['body']['xp_ganho']===0 && (int)$r['inspect']['user'][0]['pontos_totais']===5],
+    ['Quiz awards first lesson and eligible ranking',['mysql'=>true,'user'=>400,'controller'=>'api','action'=>'submitQuiz','args'=>[1],'data'=>['respostas'=>[['pergunta_id'=>1,'opcao_id'=>11]]],'setup'=>[$achievementSeed],'inspect'=>['badges'=>'SELECT conquista_id FROM usuario_conquista ORDER BY conquista_id']],200,fn($r)=>array_map('intval',array_column($r['inspect']['badges'],'conquista_id'))===[1,6]],
+    ['Existing module and streak unlock once, with matching notifications',['mysql'=>true,'user'=>400,'action'=>'achievements','setup'=>[$achievementSeed,"INSERT INTO usuario_licao_progresso VALUES (400,2,'completed',NOW())",'UPDATE usuario SET streak_dias=7,ultima_atividade_em=CURDATE() WHERE id=400'],'inspect'=>['notifications'=>"SELECT link FROM notificacao WHERE usuario_id=400 AND tipo='conquista'",'badges'=>'SELECT conquista_id FROM usuario_conquista']],200,fn($r)=>$unlocked($r)===[1,2,3] && count($r['inspect']['badges'])===3 && array_column($r['inspect']['notifications'],'link')===array_fill(0,3,'/jardim#conquistas') && $r['body']['conquistas'][4]['progresso']===1],
+    ['Another module with the same order does not qualify, expired streak resets in progress',['mysql'=>true,'user'=>400,'action'=>'achievements','setup'=>[$achievementSeed,'UPDATE modulo SET ordem=2 WHERE id IN (2,3)',"INSERT INTO usuario_licao_progresso VALUES (400,3,'completed',NOW())",'UPDATE usuario SET streak_dias=6,ultima_atividade_em=DATE_SUB(CURDATE(),INTERVAL 2 DAY) WHERE id=400'],'inspect'=>[]],200,fn($r)=>$unlocked($r)===[1,4] && $r['body']['conquistas'][2]['progresso']===0],
+    ['Completes available modules with notifications disabled',['mysql'=>true,'user'=>403,'action'=>'achievements','setup'=>[$achievementSeed,"INSERT INTO usuario_licao_progresso VALUES (403,1,'completed',NOW()),(403,99,'completed',NOW())",'UPDATE usuario SET notificacoes_ativas=0 WHERE id=403'],'inspect'=>['notifications'=>'SELECT * FROM notificacao']],200,fn($r)=>$unlocked($r)===[1,5] && $r['inspect']['notifications']===[]],
 ];
 $failed=0;
 foreach($cases as $case) {

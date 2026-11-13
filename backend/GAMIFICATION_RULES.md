@@ -21,21 +21,21 @@ Os pontos de missão só entram no saldo quando uma submissão `pending` muda pa
 
 ## Streak
 
-- Primeira atividade em um dia: inicia em 1.
-- Se a última atividade foi ontem: incrementa 1.
-- Se já houve atividade hoje: mantém.
-- Se houve intervalo maior que um dia: reinicia em 1.
+- A sequência considera a conclusão de lições novas. Repetições e aprovações de missões não alteram a sequência.
+- Na primeira conclusão, a sequência começa em 1. Se a última conclusão foi ontem, incrementa 1. Se já houve conclusão hoje, mantém. Depois de um intervalo maior que um dia, reinicia em 1 na próxima conclusão.
 
 ## Conquistas seed
 
 - `licoes:1`: Primeira Semente.
-- `modulo_completo:2`: Compostador.
+- `modulo_completo:2`: Compostador, ao completar o módulo Nutrição do Solo (ID 2).
 - `streak:7`: Sequência de 7 dias.
-- `modulo_completo:3`: Conhecedor de Pragas.
-- `todos_modulos`: Mestre Jardineiro.
-- `ranking:3`: Top 3 Ranking (regra cadastrada para apuração periódica; não é concedida na revisão/quiz).
+- `modulo_completo:3`: Conhecedor de Pragas, ao completar o módulo Controle de Pragas (ID 3).
+- `todos_modulos`: Mestre Jardineiro, ao completar todos os módulos disponíveis para o aluno naquele momento.
+- `ranking:3`: Top 3 Ranking, ao figurar entre os três primeiros do ranking individual com saldo positivo. A ordem é por pontos, nome e ID.
 
-`usuario_conquista` tem chave composta, logo uma conquista nunca é duplicada.
+As conquistas são avaliadas ao concluir uma lição, receber aprovação de missão ou abrir o Jardim. A consulta ao Jardim também reconhece progresso registrado antes do lançamento. A chave composta de `usuario_conquista` mantém um registro por aluno e conquista. O desbloqueio é permanente e gera uma única notificação quando a preferência do aluno está ativada.
+
+Administradores podem cadastrar novas conquistas pelo painel. O endpoint `POST /api/admin/conquistas` aceita as regras `licoes`, `streak`, `modulo_completo`, `todos_modulos` e `ranking`. Conquistas de módulo só podem apontar para módulos ativos de cursos gerais publicados. A coluna `regra` é única, impedindo que duas conquistas usem o mesmo critério e a mesma meta.
 
 ## Fórmulas do resumo do jardim
 
