@@ -88,7 +88,7 @@ export function QuizQuestionFormModal({
   }
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl overflow-hidden rounded-xl border-border/60 p-0 sm:p-0">
+      <DialogContent className="max-h-[calc(100dvh-1.5rem)] max-w-2xl overflow-x-hidden overflow-y-auto rounded-xl border-border/60 p-0 sm:p-0">
         <div className="bg-gradient-hero p-6 text-primary-foreground">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-xl font-bold">

@@ -111,7 +111,7 @@ export function SiteNav() {
           </div>
         </Link>
 
-        <nav className="hidden items-center gap-1 rounded-full border border-border/70 bg-card/60 p-1 shadow-soft lg:flex">
+        <nav className="hidden items-center gap-1 rounded-full border border-border/70 bg-card/60 p-1 shadow-soft xl:flex">
           {visibleNav.map(({ to, label, icon: Icon }) => {
             const active = to === "/" ? pathname === "/" : pathname.startsWith(to);
             return (
@@ -164,7 +164,7 @@ export function SiteNav() {
           </Link>
           <button
             onClick={() => setOpen((v) => !v)}
-            className="grid h-9 w-9 place-items-center rounded-full border border-border/60 bg-card text-foreground lg:hidden"
+            className="grid h-9 w-9 place-items-center rounded-full border border-border/60 bg-card text-foreground xl:hidden"
             aria-label="Menu"
           >
             {open ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
@@ -178,7 +178,7 @@ export function SiteNav() {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden border-t border-border/60 bg-background/95 lg:hidden"
+            className="overflow-hidden border-t border-border/60 bg-background/95 xl:hidden"
           >
             <div className="mx-auto grid max-w-7xl gap-1 px-4 py-3">
               {visibleNav.map(({ to, label, icon: Icon }) => {

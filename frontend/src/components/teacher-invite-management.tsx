@@ -64,7 +64,7 @@ export function TeacherInviteManagement() {
           if (!email.trim()) return toast.error("Informe o e-mail");
           send.mutate(email);
         }}
-        className="mt-4 flex gap-2"
+        className="mt-4 flex flex-col gap-2 sm:flex-row"
       >
         <input
           type="email"
@@ -76,7 +76,7 @@ export function TeacherInviteManagement() {
         />
         <button
           disabled={send.isPending}
-          className="min-h-11 rounded-lg bg-primary px-4 py-2 text-xs font-bold text-primary-foreground"
+          className="min-h-11 shrink-0 rounded-lg bg-primary px-4 py-2 text-xs font-bold text-primary-foreground"
         >
           {send.isPending ? "Enviando..." : "Enviar convite"}
         </button>
@@ -99,11 +99,11 @@ export function TeacherInviteManagement() {
           data.map((invite) => (
             <div
               key={invite.id}
-              className="flex items-center gap-3 rounded-xl border border-border/60 bg-background/60 p-3"
+              className="flex min-w-0 flex-wrap items-center gap-2 rounded-xl border border-border/60 bg-background/60 p-3 sm:flex-nowrap sm:gap-3"
             >
               <div className="min-w-0 flex-1">
                 <div className="truncate text-sm font-bold">{invite.email}</div>
-                <div className="text-[11px] text-muted-foreground">
+                <div className="break-words text-[11px] text-muted-foreground">
                   Expira em {new Date(invite.expira_em).toLocaleString("pt-BR")}
                 </div>
               </div>

@@ -192,19 +192,19 @@ function DirectorPage() {
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.04 }}
-                className="rounded-lg border border-border/60 bg-background/60 p-4"
+                className="min-w-0 rounded-lg border border-border/60 bg-background/60 p-4"
               >
                 <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <h3 className="text-lg font-bold">Turma {classroom.nome}</h3>
+                  <div className="min-w-0">
+                    <h3 className="break-words text-lg font-bold">Turma {classroom.nome}</h3>
                     <div className="text-xs text-muted-foreground">
                       {classroom.ano_letivo} · {classroom.total_alunos} alunos
                     </div>
                   </div>
                   <School className="h-5 w-5 text-primary" />
                 </div>
-                <div className="mt-3 flex items-center gap-2">
-                  <code className="rounded-lg bg-primary/10 px-3 py-1.5 text-sm font-bold tracking-wide text-primary">
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <code className="break-all rounded-lg bg-primary/10 px-3 py-1.5 text-sm font-bold tracking-wide text-primary">
                     {classroom.codigo_acesso}
                   </code>
                   <button

@@ -94,7 +94,7 @@ export function QuizModal({ lesson, onClose, onFinish }: QuizModalProps) {
         <motion.div
           initial={{ scale: 0.94, y: 16, opacity: 0 }}
           animate={{ scale: 1, y: 0, opacity: 1 }}
-          className="w-full max-w-lg overflow-hidden rounded-xl border border-border bg-card shadow-soft"
+          className="max-h-[calc(100dvh-2rem)] w-full min-w-0 max-w-lg overflow-x-hidden overflow-y-auto rounded-xl border border-border bg-card shadow-soft"
         >
           <div className="flex items-center gap-3 border-b border-border bg-muted/40 px-5 py-3">
             <button
@@ -122,7 +122,7 @@ export function QuizModal({ lesson, onClose, onFinish }: QuizModalProps) {
               <div className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
                 Pergunta {index + 1} de {questions.length}
               </div>
-              <h3 className="mt-2 text-xl font-bold leading-snug sm:text-2xl">
+              <h3 className="mt-2 break-words text-xl font-bold leading-snug sm:text-2xl">
                 {question.texto_pergunta}
               </h3>
               <div className="mt-5 space-y-2.5">

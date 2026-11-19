@@ -24,6 +24,7 @@ import { Route as AprenderRouteImport } from './routes/aprender'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ConviteProfessorTokenRouteImport } from './routes/convite-professor.$token'
+import { Route as ConviteDiretorTokenRouteImport } from './routes/convite-diretor.$token'
 import { Route as AdminQuizRouteImport } from './routes/admin.quiz'
 
 const RegistroRoute = RegistroRouteImport.update({
@@ -101,6 +102,11 @@ const ConviteProfessorTokenRoute = ConviteProfessorTokenRouteImport.update({
   path: '/convite-professor/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ConviteDiretorTokenRoute = ConviteDiretorTokenRouteImport.update({
+  id: '/convite-diretor/$token',
+  path: '/convite-diretor/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminQuizRoute = AdminQuizRouteImport.update({
   id: '/quiz',
   path: '/quiz',
@@ -123,6 +129,7 @@ export interface FileRoutesByFullPath {
   '/recompensas': typeof RecompensasRoute
   '/registro': typeof RegistroRoute
   '/admin/quiz': typeof AdminQuizRoute
+  '/convite-diretor/$token': typeof ConviteDiretorTokenRoute
   '/convite-professor/$token': typeof ConviteProfessorTokenRoute
 }
 export interface FileRoutesByTo {
@@ -141,6 +148,7 @@ export interface FileRoutesByTo {
   '/recompensas': typeof RecompensasRoute
   '/registro': typeof RegistroRoute
   '/admin/quiz': typeof AdminQuizRoute
+  '/convite-diretor/$token': typeof ConviteDiretorTokenRoute
   '/convite-professor/$token': typeof ConviteProfessorTokenRoute
 }
 export interface FileRoutesById {
@@ -160,6 +168,7 @@ export interface FileRoutesById {
   '/recompensas': typeof RecompensasRoute
   '/registro': typeof RegistroRoute
   '/admin/quiz': typeof AdminQuizRoute
+  '/convite-diretor/$token': typeof ConviteDiretorTokenRoute
   '/convite-professor/$token': typeof ConviteProfessorTokenRoute
 }
 export interface FileRouteTypes {
@@ -180,6 +189,7 @@ export interface FileRouteTypes {
     | '/recompensas'
     | '/registro'
     | '/admin/quiz'
+    | '/convite-diretor/$token'
     | '/convite-professor/$token'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -198,6 +208,7 @@ export interface FileRouteTypes {
     | '/recompensas'
     | '/registro'
     | '/admin/quiz'
+    | '/convite-diretor/$token'
     | '/convite-professor/$token'
   id:
     | '__root__'
@@ -216,6 +227,7 @@ export interface FileRouteTypes {
     | '/recompensas'
     | '/registro'
     | '/admin/quiz'
+    | '/convite-diretor/$token'
     | '/convite-professor/$token'
   fileRoutesById: FileRoutesById
 }
@@ -234,6 +246,7 @@ export interface RootRouteChildren {
   RankingRoute: typeof RankingRoute
   RecompensasRoute: typeof RecompensasRoute
   RegistroRoute: typeof RegistroRoute
+  ConviteDiretorTokenRoute: typeof ConviteDiretorTokenRoute
   ConviteProfessorTokenRoute: typeof ConviteProfessorTokenRoute
 }
 
@@ -344,6 +357,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConviteProfessorTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/convite-diretor/$token': {
+      id: '/convite-diretor/$token'
+      path: '/convite-diretor/$token'
+      fullPath: '/convite-diretor/$token'
+      preLoaderRoute: typeof ConviteDiretorTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/quiz': {
       id: '/admin/quiz'
       path: '/quiz'
@@ -379,6 +399,7 @@ const rootRouteChildren: RootRouteChildren = {
   RankingRoute: RankingRoute,
   RecompensasRoute: RecompensasRoute,
   RegistroRoute: RegistroRoute,
+  ConviteDiretorTokenRoute: ConviteDiretorTokenRoute,
   ConviteProfessorTokenRoute: ConviteProfessorTokenRoute,
 }
 export const routeTree = rootRouteImport

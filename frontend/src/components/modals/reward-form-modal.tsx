@@ -106,7 +106,7 @@ export function RewardFormModal({
   }
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="min-w-0 max-w-md overflow-hidden rounded-xl border-border/60 p-0 sm:p-0">
+      <DialogContent className="max-h-[calc(100dvh-1.5rem)] min-w-0 max-w-md overflow-x-hidden overflow-y-auto rounded-xl border-border/60 p-0 sm:p-0">
         <div className="min-w-0 rounded-t-xl bg-gradient-hero p-6 pr-20 text-primary-foreground">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-xl font-bold">

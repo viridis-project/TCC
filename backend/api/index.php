@@ -6,6 +6,7 @@ use Viridis\config\Database;
 use Viridis\controllers\ApiController;
 use Viridis\controllers\AuthController;
 use Viridis\controllers\ConviteProfessorController;
+use Viridis\controllers\ConviteDiretorController;
 use Viridis\controllers\DirectorController;
 use Viridis\controllers\GardenController;
 use Viridis\controllers\LearningController;
@@ -35,6 +36,7 @@ try {
     $missions = new MissionController($db, $auth, $config);
     $director = new DirectorController($db, $auth);
     $invites = new ConviteProfessorController($db, $auth, $config);
+    $directorInvites = new ConviteDiretorController($db, $auth, $config);
     $authController = new AuthController($db);
     $method = strtoupper($_SERVER['REQUEST_METHOD']);
     $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) ?: '/';
@@ -56,6 +58,8 @@ try {
     if ($route('POST','#^/api/auth/logout$#',[$authController,'logout'])) exit;
     if ($route('GET','#^/api/convites-professor/([a-f0-9]{64})$#',[$invites,'detail'])) exit;
     if ($route('POST','#^/api/convites-professor/([a-f0-9]{64})/aceitar$#',[$invites,'accept'])) exit;
+    if ($route('GET','#^/api/convites-diretor/([a-f0-9]{64})$#',[$directorInvites,'detail'])) exit;
+    if ($route('POST','#^/api/convites-diretor/([a-f0-9]{64})/aceitar$#',[$directorInvites,'accept'])) exit;
     if ($route('GET','#^/api/perfil$#',fn()=>$api->perfil('GET'))) exit;
     if ($route('PUT','#^/api/perfil$#',fn()=>$api->perfil('PUT'))) exit;
     if ($route('GET','#^/api/modulos$#',[$api,'modulos'])) exit;
@@ -130,6 +134,9 @@ try {
     if ($route('GET','#^/api/diretor/convites-professor$#',[$invites,'list'])) exit;
     if ($route('POST','#^/api/diretor/convites-professor$#',[$invites,'create'])) exit;
     if ($route('DELETE','#^/api/diretor/convites-professor/(\d+)$#',[$invites,'cancel'])) exit;
+    if ($route('GET','#^/api/admin/convites-diretor$#',[$directorInvites,'list'])) exit;
+    if ($route('POST','#^/api/admin/convites-diretor$#',[$directorInvites,'create'])) exit;
+    if ($route('DELETE','#^/api/admin/convites-diretor/(\d+)$#',[$directorInvites,'cancel'])) exit;
     if ($route('GET','#^/api/admin/recompensas$#',fn()=>$v2->managedRewards('app','GET'))) exit;
     if ($route('POST','#^/api/admin/recompensas$#',fn()=>$v2->managedRewards('app','POST'))) exit;
     if ($route('POST','#^/api/admin/recompensas/(\d+)$#',fn($id)=>$v2->managedRewards('app','PUT',$id))) exit;

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import { CalendarDays, Check, ChevronDown, Clock3 } from "lucide-react";
 import { ptBR } from "date-fns/locale";
 import { Calendar } from "@/components/ui/calendar";
@@ -58,7 +58,7 @@ export function DatePicker({
           <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
         </button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-auto max-w-[calc(100vw-1.5rem)] rounded-xl p-0">
+      <PopoverContent align="start" className="w-auto rounded-xl p-0">
         <div className="border-b border-border/60 px-4 py-3">
           <div className="text-sm font-bold">Escolha a data</div>
           <div className="text-xs text-muted-foreground">Selecione o dia da atividade.</div>
@@ -74,7 +74,11 @@ export function DatePicker({
             onChange(serializeDate(day));
             setOpen(false);
           }}
-          className="[--cell-size:2.75rem]"
+          style={
+            {
+              "--cell-size": "clamp(1.25rem, calc((100vw - 3rem) / 7), 2.75rem)",
+            } as CSSProperties
+          }
         />
       </PopoverContent>
     </Popover>
@@ -103,20 +107,20 @@ export function TimePicker({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <button type="button" className={triggerClass} aria-label="Selecionar horário">
-          <span className={cn("flex items-center gap-2", !value && "text-muted-foreground")}>
-            <Clock3 className="h-4 w-4 text-primary" aria-hidden="true" />
-            <span>{value || "Escolha um horário"}</span>
+          <span className={cn("flex min-w-0 items-center gap-2", !value && "text-muted-foreground")}>
+            <Clock3 className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+            <span className="truncate">{value || "Escolha um horário"}</span>
           </span>
           <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
         </button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-80 max-w-[calc(100vw-1.5rem)] rounded-xl p-0">
-        <div className="flex items-center justify-between border-b border-border/60 px-4 py-3">
-          <div>
+      <PopoverContent align="end" className="w-80 rounded-xl p-0">
+        <div className="flex min-w-0 items-center justify-between gap-2 border-b border-border/60 px-3 py-3 sm:px-4">
+          <div className="min-w-0">
             <div className="text-sm font-bold">Escolha o horário</div>
             <div className="text-xs text-muted-foreground">Hora e minutos</div>
           </div>
-          <div className="rounded-lg bg-primary/10 px-3 py-1.5 font-display text-lg font-bold tabular-nums text-primary">
+          <div className="shrink-0 rounded-lg bg-primary/10 px-2 py-1.5 font-display text-lg font-bold tabular-nums text-primary sm:px-3">
             {selectedHour || "--"}:{selectedMinute || "--"}
           </div>
         </div>

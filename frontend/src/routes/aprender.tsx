@@ -76,9 +76,9 @@ function NodeButton({
   const Icon = kindIcon[lesson.kind] ?? BookOpen;
   const offset =
     side === "left"
-      ? "-translate-x-16 sm:-translate-x-28"
+      ? "-translate-x-12 sm:-translate-x-28"
       : side === "right"
-        ? "translate-x-16 sm:translate-x-28"
+        ? "translate-x-12 sm:translate-x-28"
         : "";
 
   const styles = {
@@ -198,7 +198,7 @@ function LessonModal({
             exit={{ scale: 0.92, y: 12, opacity: 0 }}
             transition={{ type: "spring", stiffness: 280, damping: 24 }}
             onClick={(e) => e.stopPropagation()}
-            className="relative w-full max-w-md overflow-hidden rounded-xl border border-border bg-card shadow-soft"
+            className="relative max-h-[calc(100dvh-2rem)] w-full min-w-0 max-w-md overflow-x-hidden overflow-y-auto rounded-xl border border-border bg-card shadow-soft"
           >
             <button
               onClick={onClose}
@@ -219,7 +219,7 @@ function LessonModal({
               <div className="relative mx-auto grid h-20 w-20 place-items-center rounded-xl bg-white/15 backdrop-blur-sm">
                 <BookOpen className="h-10 w-10" />
               </div>
-              <h3 className="relative mt-4 text-xl font-bold">{lesson.title}</h3>
+              <h3 className="relative mt-4 break-words text-xl font-bold">{lesson.title}</h3>
               <p className="relative mt-1 text-sm text-primary-foreground/80">
                 Quiz interativo • +{lesson.xp} XP
               </p>
@@ -275,7 +275,7 @@ function CelebrationModal({
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.5, opacity: 0 }}
             transition={{ type: "spring", stiffness: 220, damping: 18 }}
-            className="relative w-full max-w-sm overflow-hidden rounded-xl bg-card p-8 text-center shadow-soft"
+            className="relative max-h-[calc(100dvh-2rem)] w-full min-w-0 max-w-sm overflow-x-hidden overflow-y-auto rounded-xl bg-card p-6 text-center shadow-soft sm:p-8"
             onClick={(e) => e.stopPropagation()}
           >
             <motion.div
@@ -413,7 +413,7 @@ function LearnPage() {
             aria-hidden
             className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-warning/5"
           />
-          <div className="relative grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 sm:flex sm:justify-between">
+          <div className="relative flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex min-w-0 items-center gap-3">
               <div className="relative grid h-12 w-12 shrink-0 place-items-center rounded-lg bg-gradient-hero text-primary-foreground font-bold shadow-soft">
                 {user.nivel}
@@ -425,7 +425,7 @@ function LearnPage() {
                 <div className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
                   Nível {user.nivel}
                 </div>
-                <div className="mt-1 flex items-center gap-2">
+                <div className="mt-1 flex min-w-0 items-center gap-2">
                   <div className="h-2 w-32 overflow-hidden rounded-full bg-muted sm:w-48">
                     <motion.div
                       initial={{ width: 0 }}
@@ -434,7 +434,7 @@ function LearnPage() {
                       className="h-full bg-primary"
                     />
                   </div>
-                  <span className="text-xs font-bold text-muted-foreground">
+                  <span className="shrink-0 whitespace-nowrap text-xs font-bold text-muted-foreground">
                     {totalXP}/{user.xp_proximo_nivel} XP
                   </span>
                 </div>
@@ -503,11 +503,11 @@ function LearnPage() {
                     <div key={lesson.id} className="relative z-10 flex flex-col items-center gap-3">
                       <NodeButton lesson={lesson} side={side} onClick={() => setSelected(lesson)} />
                       <div
-                        className={`max-w-[180px] text-center text-xs font-semibold text-muted-foreground ${
+                        className={`max-w-[180px] break-words text-center text-xs font-semibold text-muted-foreground ${
                           side === "left"
-                            ? "-translate-x-16 sm:-translate-x-28"
+                            ? "-translate-x-12 sm:-translate-x-28"
                             : side === "right"
-                              ? "translate-x-16 sm:translate-x-28"
+                              ? "translate-x-12 sm:translate-x-28"
                               : ""
                         }`}
                       >

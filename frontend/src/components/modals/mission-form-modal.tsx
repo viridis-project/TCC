@@ -77,7 +77,7 @@ export function MissionFormModal({
   }
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[calc(100dvh-1.5rem)] max-w-lg overflow-y-auto rounded-xl border-border/60 p-0 sm:p-0">
+      <DialogContent className="max-h-[calc(100dvh-1.5rem)] max-w-lg overflow-x-hidden overflow-y-auto rounded-xl border-border/60 p-0 sm:p-0">
         <div className="bg-gradient-hero p-6 text-primary-foreground">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-xl font-bold">
@@ -89,7 +89,7 @@ export function MissionFormModal({
             </DialogDescription>
           </DialogHeader>
         </div>
-        <form onSubmit={submit} className="space-y-4 p-6">
+        <form onSubmit={submit} className="min-w-0 space-y-4 p-4 sm:p-6">
           <Field label="Turma">
             <select
               value={classId}
@@ -160,7 +160,7 @@ export function MissionFormModal({
               />
             </label>
           </Field>
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <Field label="Tipo">
               <select
                 value={type}
@@ -224,7 +224,7 @@ const inputCls =
   "w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20";
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <label className="block">
+    <label className="block min-w-0">
       <span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-muted-foreground">
         {label}
       </span>

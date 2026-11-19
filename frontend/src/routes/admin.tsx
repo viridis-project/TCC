@@ -29,6 +29,7 @@ import { toast } from "sonner";
 import { ReviewActivityModal, type PendingItem } from "@/components/modals/review-activity-modal";
 import { AddPartnerModal } from "@/components/modals/add-partner-modal";
 import { RewardManagement } from "@/components/reward-management";
+import { DirectorInviteManagement } from "@/components/director-invite-management";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({ meta: [{ title: "Administração — Viridis" }] }),
@@ -64,7 +65,7 @@ function Card({ children }: { children: React.ReactNode }) {
     <motion.section
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className="rounded-lg border border-border/60 bg-card p-6 shadow-soft"
+      className="rounded-lg border border-border/60 bg-card p-4 shadow-soft sm:p-6"
     >
       {children}
     </motion.section>
@@ -307,9 +308,10 @@ export function OperationalPage({ panel }: { panel: "admin" | "professor" }) {
             </div>
           </div>
         </Card>
+        {user?.perfil_nome === "admin" && <DirectorInviteManagement />}
         {user?.perfil_nome === "admin" && (
           <Card>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <h2 className="text-sm font-bold uppercase tracking-wide">Parcerias locais</h2>
               <button
                 onClick={() => setOpenPartner(true)}
@@ -323,12 +325,12 @@ export function OperationalPage({ panel }: { panel: "admin" | "professor" }) {
               {data.partners.map((p) => (
                 <div
                   key={p.id}
-                  className="flex items-center gap-3 rounded-xl border border-border p-3"
+                  className="flex min-w-0 items-center gap-3 rounded-xl border border-border p-3"
                 >
-                  <Building2 className="h-5 w-5 text-primary" />
-                  <div>
-                    <div className="font-bold">{p.nome}</div>
-                    <div className="text-xs text-muted-foreground">
+                  <Building2 className="h-5 w-5 shrink-0 text-primary" />
+                  <div className="min-w-0 flex-1">
+                    <div className="break-words font-bold">{p.nome}</div>
+                    <div className="break-words text-xs text-muted-foreground">
                       {p.tipo} · {p.email}
                     </div>
                   </div>

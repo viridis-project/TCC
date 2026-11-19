@@ -149,9 +149,9 @@ export function ScheduleCalendar({
   }
 
   return (
-    <section className="mt-6 overflow-hidden rounded-xl border border-border/60 bg-card shadow-soft">
-      <div className="flex flex-col gap-3 border-b border-border/60 p-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-1">
+    <section className="mt-6 min-w-0 overflow-hidden rounded-xl border border-border/60 bg-card shadow-soft">
+      <div className="flex min-w-0 flex-col gap-3 border-b border-border/60 p-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+        <div className="flex min-w-0 items-center gap-1">
           <button
             type="button"
             onClick={() => movePeriod(-1)}
@@ -186,11 +186,11 @@ export function ScheduleCalendar({
           </button>
         </div>
 
-        <h2 className="order-first font-display text-lg font-bold capitalize text-foreground sm:order-none">
+        <h2 className="order-first min-w-0 max-w-full font-display text-lg font-bold capitalize text-foreground sm:order-none">
           {periodLabel}
         </h2>
 
-        <div className="grid grid-cols-2 rounded-lg border border-border bg-muted/50 p-1">
+        <div className="grid min-w-0 grid-cols-2 rounded-lg border border-border bg-muted/50 p-1">
           <ViewButton active={view === "week"} onClick={() => setView("week")}>
             <CalendarRange className="h-4 w-4" aria-hidden="true" /> Semana
           </ViewButton>
@@ -210,7 +210,14 @@ export function ScheduleCalendar({
           onResults={setResultItem}
         />
       ) : (
-        <MonthView anchor={anchor} items={grouped} onResults={setResultItem} />
+        <MonthView
+          anchor={anchor}
+          items={grouped}
+          professor={professor}
+          updating={updating}
+          onStatus={onStatus}
+          onResults={setResultItem}
+        />
       )}
       {resultItem && (
         <div
@@ -221,11 +228,11 @@ export function ScheduleCalendar({
             role="dialog"
             aria-modal="true"
             aria-label={resultItem.titulo}
-            className="max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto rounded-2xl bg-card p-6 shadow-xl"
+            className="max-h-[calc(100dvh-2rem)] w-full min-w-0 max-w-lg overflow-x-hidden overflow-y-auto rounded-2xl bg-card p-4 shadow-xl sm:p-6"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-3">
-              <div>
+              <div className="min-w-0">
                 <h2 className="text-lg font-bold">{resultItem.titulo}</h2>
                 <p className="mt-1 text-sm text-muted-foreground">
                   {format(resultItem.date, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })} · {statusLabel[resultItem.status]}
@@ -336,7 +343,19 @@ function WeekView({
   ).sort((a, b) => a - b);
 
   return (
-    <div className="overflow-x-auto" aria-label="Calendário semanal">
+    <>
+      <div className="xl:hidden">
+        <MobileAgenda
+          items={visibleItems}
+          professor={professor}
+          updating={updating}
+          onStatus={onStatus}
+          onResults={onResults}
+          allowCancel
+          emptyLabel="Nenhuma atividade nesta semana."
+        />
+      </div>
+      <div className="hidden overflow-x-auto xl:block" aria-label="Calendário semanal">
       <div className="min-w-[1080px]">
         <div className="grid grid-cols-[5rem_repeat(7,minmax(0,1fr))] bg-muted/30">
           <div className="border-r border-border/60" />
@@ -405,7 +424,8 @@ function WeekView({
           </div>
         ))}
       </div>
-    </div>
+      </div>
+    </>
   );
 }
 
@@ -469,7 +489,21 @@ function WeekEvent({
   );
 }
 
-function MonthView({ anchor, items, onResults }: { anchor: Date; items: GroupedItem[]; onResults: (item: GroupedItem) => void }) {
+function MonthView({
+  anchor,
+  items,
+  professor,
+  updating,
+  onStatus,
+  onResults,
+}: {
+  anchor: Date;
+  items: GroupedItem[];
+  professor: boolean;
+  updating: boolean;
+  onStatus: (ids: number[], value: "cancelado") => void;
+  onResults: (item: GroupedItem) => void;
+}) {
   const monthStart = startOfMonth(anchor);
   const monthEnd = endOfMonth(anchor);
   const calendarStart = startOfWeek(monthStart, { weekStartsOn: 1 });
@@ -483,9 +517,22 @@ function MonthView({ anchor, items, onResults }: { anchor: Date; items: GroupedI
       calendarStart.getDate() + 6,
     ),
   });
+  const monthItems = items.filter((item) => item.date >= monthStart && item.date <= monthEnd);
 
   return (
-    <div className="overflow-x-auto" aria-label="Calendário mensal">
+    <>
+      <div className="xl:hidden">
+        <MobileAgenda
+          items={monthItems}
+          professor={professor}
+          updating={updating}
+          onStatus={onStatus}
+          onResults={onResults}
+          allowCancel={false}
+          emptyLabel="Nenhuma atividade neste mês."
+        />
+      </div>
+      <div className="hidden overflow-x-auto xl:block" aria-label="Calendário mensal">
       <div className="min-w-[840px]">
         <div className="grid grid-cols-7 bg-muted/30">
           {weekdayLabels.map((day) => (
@@ -547,6 +594,88 @@ function MonthView({ anchor, items, onResults }: { anchor: Date; items: GroupedI
           })}
         </div>
       </div>
+      </div>
+    </>
+  );
+}
+
+function MobileAgenda({
+  items,
+  professor,
+  updating,
+  onStatus,
+  onResults,
+  allowCancel,
+  emptyLabel,
+}: {
+  items: GroupedItem[];
+  professor: boolean;
+  updating: boolean;
+  onStatus: (ids: number[], value: "cancelado") => void;
+  onResults: (item: GroupedItem) => void;
+  allowCancel: boolean;
+  emptyLabel: string;
+}) {
+  const byDay = new Map<string, GroupedItem[]>();
+  for (const item of items) {
+    const key = format(item.date, "yyyy-MM-dd");
+    byDay.set(key, [...(byDay.get(key) ?? []), item]);
+  }
+
+  if (items.length === 0) {
+    return <p className="p-6 text-center text-sm text-muted-foreground">{emptyLabel}</p>;
+  }
+
+  return (
+    <div className="divide-y divide-border/60">
+      {[...byDay.entries()].map(([dayKey, dayItems]) => (
+        <section key={dayKey} className="p-4">
+          <h3 className="mb-3 text-sm font-bold capitalize text-foreground">
+            {format(dayItems[0].date, "EEEE, d 'de' MMMM", { locale: ptBR })}
+          </h3>
+          <div className="space-y-2">
+            {dayItems.map((item) => (
+              <article
+                key={item.ids.join("-")}
+                className={cn(
+                  "flex min-w-0 items-center gap-3 rounded-lg border p-3",
+                  statusClass[item.status],
+                )}
+              >
+                <span className="shrink-0 text-sm font-bold tabular-nums">
+                  {format(item.date, "HH:mm")}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <button
+                    type="button"
+                    onClick={() => hasDetails(item) && onResults(item)}
+                    disabled={!hasDetails(item)}
+                    className="block max-w-full truncate text-left text-sm font-bold disabled:cursor-default"
+                  >
+                    {item.titulo}
+                  </button>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {professor && item.turma ? `${item.turma} · ` : ""}
+                    {item.alunos.length ? `Com ${item.alunos.join(", ")}` : "Sem alunos"}
+                    {` · ${statusLabel[item.status]}`}
+                  </p>
+                </div>
+                {allowCancel && professor && item.status === "agendado" && (
+                  <button
+                    type="button"
+                    disabled={updating}
+                    onClick={() => onStatus(item.ids, "cancelado")}
+                    className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-destructive text-destructive-foreground disabled:opacity-50"
+                    aria-label={`Cancelar ${item.titulo}`}
+                  >
+                    <X className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                )}
+              </article>
+            ))}
+          </div>
+        </section>
+      ))}
     </div>
   );
 }

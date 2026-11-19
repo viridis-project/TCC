@@ -70,7 +70,7 @@ function RewardsPage() {
           animate={{ opacity: 1, y: 0 }}
           className="overflow-hidden rounded-xl bg-gradient-hero p-6 text-primary-foreground shadow-soft sm:p-8"
         >
-          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 sm:flex sm:justify-between">
+          <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
               <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-white/70">
                 <Award className="h-3.5 w-3.5" /> Loja de Recompensas
@@ -82,7 +82,7 @@ function RewardsPage() {
                 Cada ponto cultivado vira impacto real na sua comunidade.
               </p>
             </div>
-            {canRedeem && <div className="shrink-0 rounded-lg border border-white/20 bg-white/10 px-5 py-3 text-right backdrop-blur-sm">
+            {canRedeem && <div className="shrink-0 self-start rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-right backdrop-blur-sm sm:self-auto sm:px-5 sm:py-3">
               <div className="text-[11px] uppercase tracking-wide text-white/70">Seus pontos</div>
               <div className="text-2xl font-bold">{points.toLocaleString("pt-BR")}</div>
             </div>}

@@ -109,18 +109,6 @@ function LoginPage() {
                 </button>
               </div>
             </label>
-            <div className="flex items-center justify-between text-xs">
-              <label className="flex items-center gap-2 text-muted-foreground">
-                <input type="checkbox" className="h-4 w-4 rounded border-input" /> Lembrar de mim
-              </label>
-              <button
-                type="button"
-                className="min-h-11 px-2 font-semibold text-primary hover:underline"
-              >
-                Esqueceu a senha?
-              </button>
-            </div>
-
             <motion.button
               type="submit"
               whileTap={{ scale: 0.99 }}

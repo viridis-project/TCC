@@ -81,20 +81,20 @@ function SchedulePage() {
   const professor = role === "professor" || role === "admin" || role === "diretor";
   return (
     <PageShell>
-      <div className="app-page">
+      <div className="app-page min-w-0">
         <motion.section
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="overflow-hidden rounded-xl bg-gradient-hero p-6 text-primary-foreground shadow-soft"
+          className="min-w-0 overflow-hidden rounded-xl bg-gradient-hero p-4 text-primary-foreground shadow-soft sm:p-6"
         >
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="grid h-12 w-12 place-items-center rounded-lg bg-white/15">
+          <div className="flex min-w-0 flex-wrap items-center justify-between gap-4">
+            <div className="flex min-w-0 flex-1 items-center gap-3">
+              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-lg bg-white/15">
                 <User className="h-6 w-6" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <h1 className="text-xl font-bold">{professor ? "Agenda das turmas" : user.nome}</h1>
-                <p className="text-xs text-white/70">
+                <p className="break-words text-xs text-white/70">
                   {professor
                     ? "Publique missões e acompanhe os turnos que os alunos reservaram"
                     : `Veja os horários de todos os alunos da turma${user.turma ? ` · ${user.turma}` : ""}`}
@@ -104,7 +104,7 @@ function SchedulePage() {
             {professor && role !== "diretor" && (
               <button
                 onClick={() => setModal(true)}
-                className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-bold text-primary"
+                className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-bold text-primary"
                 aria-label="Nova missão"
               >
                 <Plus className="h-4 w-4" />

@@ -167,10 +167,6 @@ function RegisterPage() {
                 </div>
               )}
             </label>
-            <label className="flex items-center gap-2 text-xs text-muted-foreground">
-              <input type="checkbox" className="h-4 w-4 rounded border-input" /> Lembrar de mim
-            </label>
-
             <motion.button
               type="submit"
               whileTap={{ scale: 0.99 }}

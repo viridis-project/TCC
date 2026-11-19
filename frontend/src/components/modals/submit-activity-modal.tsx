@@ -128,7 +128,7 @@ export function SubmitActivityModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg overflow-hidden rounded-xl border-border/60 p-0 sm:p-0">
+      <DialogContent className="max-h-[calc(100dvh-1.5rem)] max-w-lg overflow-x-hidden overflow-y-auto rounded-xl border-border/60 p-0 sm:p-0">
         <div className="bg-gradient-hero p-6 text-primary-foreground">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold">Enviar comprovação</DialogTitle>
