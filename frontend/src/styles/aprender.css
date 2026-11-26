@@ -1,0 +1,245 @@
+/*
+ * Identidade visual do /aprender (escopo: .vr e .vr-tokens).
+ * Paleta obrigatória do Viridis: floresta #135934, musgo #254c19, lima #8bc34a, menta #c5e9ae,
+ * branco e preto. Os tons escuros do tema escuro são misturas dessas cores com preto.
+ * Os tokens reaproveitam os nomes do design system (primary, card, border...) para que
+ * componentes existentes dentro da página (ex.: QuizModal) herdem o visual automaticamente.
+ * `.vr-tokens` aplica a mesma paleta em diálogos renderizados no body (acima da navegação).
+ */
+.vr,
+.vr-tokens {
+  --vr-floresta: #135934;
+  --vr-musgo: #254c19;
+  --vr-lima: #8bc34a;
+  --vr-menta: #c5e9ae;
+  --vr-ease: cubic-bezier(0.23, 1, 0.32, 1);
+
+  --background: #f1f9eb;
+  --foreground: #11220b;
+  --card: #ffffff;
+  --card-foreground: #11220b;
+  --popover: #ffffff;
+  --popover-foreground: #11220b;
+  --primary: #135934;
+  --primary-hover: #0f4a2a;
+  --primary-active: #0c3d23;
+  --primary-foreground: #ffffff;
+  --primary-glow: #8bc34a;
+  --secondary: #c5e9ae;
+  --secondary-foreground: #254c19;
+  --muted: #e3f2d8;
+  --muted-foreground: #4a6143;
+  --accent: #c5e9ae;
+  --accent-foreground: #254c19;
+  --border: #cfe3c0;
+  --input: #b5cda4;
+  --ring: #135934;
+}
+
+/* Contêiner da página (contexto próprio para o fundo decorativo) */
+.vr {
+  position: relative;
+  isolation: isolate;
+  min-height: 100%;
+  background: var(--background);
+  color: var(--foreground);
+}
+
+.dark .vr,
+.dark .vr-tokens {
+  /* misturas de musgo/menta/lima com preto e branco */
+  --background: #050b04;
+  --foreground: #e5f5da;
+  --card: #0b1708;
+  --card-foreground: #e5f5da;
+  --popover: #0b1708;
+  --popover-foreground: #e5f5da;
+  --primary: #8bc34a;
+  --primary-hover: #9dd05c;
+  --primary-active: #7ab13e;
+  --primary-foreground: #0a1706;
+  --primary-glow: #8bc34a;
+  --secondary: #254c19;
+  --secondary-foreground: #c5e9ae;
+  --muted: #10210b;
+  --muted-foreground: #95ba81;
+  --accent: #254c19;
+  --accent-foreground: #c5e9ae;
+  --border: rgb(139 195 74 / 0.22);
+  --input: rgb(139 195 74 / 0.3);
+  --ring: #8bc34a;
+}
+
+/* Atmosfera da página: fileiras de plantio + luz de estufa */
+.vr-bg {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(60rem 28rem at 0% -6%, rgb(197 233 174 / 0.55), transparent 65%),
+    radial-gradient(44rem 30rem at 100% 12%, rgb(139 195 74 / 0.16), transparent 60%),
+    repeating-linear-gradient(100deg, transparent 0 46px, rgb(19 89 52 / 0.035) 46px 47px);
+}
+.dark .vr-bg {
+  background:
+    radial-gradient(56rem 28rem at 0% -6%, rgb(37 76 25 / 0.55), transparent 65%),
+    radial-gradient(40rem 28rem at 100% 14%, rgb(139 195 74 / 0.1), transparent 60%),
+    repeating-linear-gradient(100deg, transparent 0 46px, rgb(139 195 74 / 0.035) 46px 47px);
+}
+
+.vr-display {
+  font-family: "Bricolage Grotesque", "Plus Jakarta Sans", "Inter", system-ui, sans-serif;
+  letter-spacing: -0.03em;
+}
+
+/* Cartão de destaque (HUD, próxima lição, modais): floresta -> musgo, textura de fileiras */
+.vr-hero {
+  position: relative;
+  overflow: hidden;
+  color: #f1f9eb;
+  background:
+    radial-gradient(90% 100% at 100% 100%, rgb(139 195 74 / 0.32), transparent 62%),
+    linear-gradient(140deg, #135934 0%, #254c19 100%);
+}
+.vr-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    100deg,
+    transparent 0 20px,
+    rgb(255 255 255 / 0.05) 20px 21px
+  );
+  mask-image: linear-gradient(90deg, transparent, #000 80%);
+}
+.vr-hero > * {
+  position: relative;
+  z-index: 1;
+}
+.dark .vr-hero {
+  background:
+    radial-gradient(90% 100% at 100% 100%, rgb(139 195 74 / 0.22), transparent 62%),
+    linear-gradient(140deg, #0e3a24 0%, #1b3a13 100%);
+  box-shadow: inset 0 0 0 1px rgb(139 195 74 / 0.18);
+}
+
+.vr-ring-v {
+  transition: stroke-dashoffset 1.1s var(--vr-ease);
+}
+.vr-bar-fill {
+  transform-origin: left;
+  transition: transform 1s var(--vr-ease);
+}
+
+/* Trilha: segmentos concluídos "crescem" até a próxima lição */
+.vr-seg-todo {
+  stroke: var(--input);
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-dasharray: 2 13;
+  fill: none;
+}
+.vr-seg-done {
+  stroke: var(--primary);
+  stroke-width: 5;
+  stroke-linecap: round;
+  fill: none;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  transition: stroke-dashoffset 0.9s var(--vr-ease) var(--vr-d, 0s);
+}
+.vr-in .vr-seg-done {
+  stroke-dashoffset: 0;
+}
+
+.vr-node-pulse {
+  animation: vr-pulse 2.2s var(--vr-ease) infinite;
+}
+.vr-mascot {
+  opacity: 0;
+  transform: translateX(var(--vr-from, -40%)) rotate(-4deg);
+  transition:
+    opacity 0.5s var(--vr-ease) 0.7s,
+    transform 0.9s var(--vr-ease) 0.7s;
+}
+.vr-in .vr-mascot {
+  opacity: 1;
+  transform: none;
+}
+.vr-float {
+  animation: vr-float 4.6s ease-in-out 2s infinite;
+}
+.vr-mascot-glow {
+  background: radial-gradient(closest-side, rgb(139 195 74 / 0.45), transparent);
+}
+.vr-bubble {
+  opacity: 0;
+  transform: scale(0.7) translateY(6px);
+  transform-origin: bottom center;
+  transition:
+    opacity 0.4s var(--vr-ease) 1.5s,
+    transform 0.5s var(--vr-ease) 1.5s;
+}
+.vr-in .vr-bubble {
+  opacity: 1;
+  transform: none;
+}
+.vr-load-mascot {
+  animation: vr-float 2.4s ease-in-out infinite;
+}
+.vr-skeleton {
+  animation: vr-breathe 1.6s ease-in-out infinite;
+}
+
+@keyframes vr-pulse {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.55;
+  }
+  100% {
+    transform: scale(1.55);
+    opacity: 0;
+  }
+}
+@keyframes vr-float {
+  50% {
+    transform: translateY(-6px);
+  }
+}
+@keyframes vr-breathe {
+  50% {
+    opacity: 0.45;
+  }
+}
+@keyframes vr-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+.vr-rise {
+  animation: vr-rise 0.6s var(--vr-ease) both;
+  animation-delay: var(--vr-d, 0s);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vr-node-pulse,
+  .vr-float,
+  .vr-load-mascot,
+  .vr-skeleton,
+  .vr-rise {
+    animation: none;
+  }
+  .vr-ring-v,
+  .vr-bar-fill,
+  .vr-seg-done,
+  .vr-mascot,
+  .vr-bubble {
+    transition: none;
+  }
+  .vr-mascot {
+    transform: none;
+  }
+}

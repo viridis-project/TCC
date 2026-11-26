@@ -47,6 +47,11 @@
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
 
+  --color-forest: #135934;
+  --color-moss: #254c19;
+  --color-lime: #8bc34a;
+  --color-mint: #c5e9ae;
+
   --shadow-soft: 0 1px 2px oklch(0.19 0.025 155 / 0.05), 0 3px 10px oklch(0.19 0.025 155 / 0.04);
   --shadow-elevated:
     0 12px 32px oklch(0.19 0.025 155 / 0.1), 0 2px 8px oklch(0.19 0.025 155 / 0.05);
@@ -103,6 +108,7 @@
   --chart-5: #7f6b52;
 
   --gradient-hero: linear-gradient(135deg, #0d5332 0%, #167143 100%);
+  --gradient-garden: linear-gradient(135deg, #135934 0%, #17703f 100%);
   --gradient-card: linear-gradient(180deg, #ffffff 0%, #fffcf5 100%);
 }
 
@@ -133,6 +139,7 @@
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 14%);
   --ring: oklch(0.65 0.17 150);
+  --gradient-garden: linear-gradient(135deg, #0f4a2b 0%, #135934 100%);
 }
 
 @layer base {
@@ -217,12 +224,48 @@
   }
   .auth-shell {
     min-height: 100vh;
+    overflow-x: clip;
     background: var(--color-background);
   }
   .auth-panel {
     position: relative;
-    background: #0d5332;
+    isolation: isolate;
     color: white;
+    background:
+      radial-gradient(120% 80% at 100% 100%, rgb(37 76 25 / 0.55) 0%, transparent 60%),
+      radial-gradient(90% 60% at 0% 0%, rgb(139 195 74 / 0.12) 0%, transparent 55%), #135934;
+  }
+  .auth-input {
+    width: 100%;
+    border: 1px solid var(--color-input);
+    border-radius: var(--radius-xl);
+    background: color-mix(in oklab, var(--color-card) 55%, var(--color-background));
+    padding: 0.8rem 1rem;
+    color: var(--color-foreground);
+    font-size: 0.875rem;
+    transition-property: border-color, box-shadow, background-color;
+  }
+  .auth-input::placeholder {
+    color: color-mix(in oklab, var(--color-muted-foreground) 75%, transparent);
+  }
+  .auth-input:hover:not(:disabled) {
+    border-color: color-mix(in oklab, var(--color-primary) 45%, var(--color-input));
+  }
+  .auth-input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    background: var(--color-card);
+    box-shadow: 0 0 0 4px color-mix(in oklab, var(--color-primary) 15%, transparent);
+  }
+  .auth-input[aria-invalid="true"] {
+    border-color: var(--color-destructive);
+  }
+  .auth-input[aria-invalid="true"]:focus {
+    box-shadow: 0 0 0 4px color-mix(in oklab, var(--color-destructive) 16%, transparent);
+  }
+  .auth-input:disabled {
+    cursor: not-allowed;
+    opacity: 0.65;
   }
 }
 
@@ -272,4 +315,17 @@ main :where(.shadow-glow) {
 }
 @utility shadow-glow {
   box-shadow: var(--shadow-glow);
+}
+
+@utility bg-gradient-garden {
+  background-image: var(--gradient-garden);
+}
+@utility scroll-fade {
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 1.25rem), transparent);
+}
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }

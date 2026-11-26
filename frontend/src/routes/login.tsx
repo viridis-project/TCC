@@ -1,27 +1,52 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { motion } from "motion/react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { Eye, EyeOff, Sprout, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { apiFetch, type User } from "@/lib/api";
-import { AuthBrandPanel } from "@/components/auth-brand-panel";
+import { homePathFor } from "@/lib/nav";
+import {
+  AuthField,
+  AuthHeading,
+  AuthLayout,
+  AuthLogo,
+  AuthSubmit,
+  AuthSwitch,
+} from "@/components/auth-ui";
 
 export const Route = createFileRoute("/login")({
   head: () => ({ meta: [{ title: "Entrar — Viridis" }] }),
   component: LoginPage,
 });
 
+type LoginField = "login" | "password";
+
+function validate(login: string, password: string): Partial<Record<LoginField, string>> {
+  const errors: Partial<Record<LoginField, string>> = {};
+  if (!login.trim()) errors.login = "Informe seu usuário ou e-mail";
+  if (!password) errors.password = "Informe sua senha";
+  return errors;
+}
+
 function LoginPage() {
-  const [show, setShow] = useState(false);
   const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
+  const [touched, setTouched] = useState<Partial<Record<LoginField, boolean>>>({});
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
+  const errors = validate(login, password);
+  const visibleError = (field: LoginField) => (touched[field] ? errors[field] : undefined);
+  const touch = (field: LoginField) => setTouched((current) => ({ ...current, [field]: true }));
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    const firstInvalid = (Object.keys(errors) as LoginField[])[0];
+    if (firstInvalid) {
+      setTouched({ login: true, password: true });
+      document.getElementById(`login-${firstInvalid}`)?.focus();
+      return;
+    }
     setLoading(true);
     try {
       const result = await apiFetch<{ mensagem: string; usuario: User }>("/auth/login", {
@@ -30,109 +55,57 @@ function LoginPage() {
       });
       queryClient.setQueryData(["perfil"], result.usuario);
       toast.success(result.mensagem);
-      const destino =
-        result.usuario.perfil_nome === "aluno"
-          ? "/aprender"
-          : result.usuario.perfil_nome === "professor"
-            ? "/professor"
-            : result.usuario.perfil_nome === "diretor"
-              ? "/diretor"
-              : "/admin";
-      await navigate({ to: destino });
+      // mesmo mapeamento de antes (aluno → /aprender, professor → /professor, diretor → /diretor, demais → /admin)
+      await navigate({ to: homePathFor(result.usuario.perfil_nome) });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Não foi possível entrar");
     } finally {
       setLoading(false);
     }
   }
+
   return (
-    <div className="auth-shell grid lg:grid-cols-2">
-      <motion.section
-        initial={{ opacity: 0, x: -20 }}
-        animate={{ opacity: 1, x: 0 }}
-        className="flex flex-col justify-center px-6 py-12 sm:px-12 lg:px-20"
-      >
-        <Link to="/" className="mb-12 inline-flex items-center gap-2">
-          <div className="grid h-11 w-11 place-items-center rounded-xl bg-gradient-hero text-primary-foreground">
-            <Sprout className="h-5 w-5" />
-          </div>
-          <div className="leading-tight">
-            <div className="text-base font-bold tracking-tight">VIRIDIS</div>
-            <div className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-              Cultivando Sustentabilidade
-            </div>
-          </div>
-        </Link>
-
-        <div className="max-w-sm">
-          <h1 className="text-3xl font-bold text-foreground sm:text-4xl">Login na Viridis</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Entre na sua conta para aproveitar todas as funcionalidades.
-          </p>
-
-          <form onSubmit={handleSubmit} className="mt-8 space-y-4">
-            <label className="block">
-              <span className="mb-1.5 block text-xs font-semibold text-foreground">
-                Usuário ou e-mail
-              </span>
-              <input
-                value={login}
-                onChange={(e) => setLogin(e.target.value)}
-                required
-                autoComplete="username"
-                className="w-full rounded-xl border border-input bg-background px-4 py-3 text-sm focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15"
-                placeholder="Seu nome de usuário ou e-mail"
-              />
-            </label>
-            <label className="block">
-              <span className="mb-1.5 block text-xs font-semibold text-muted-foreground">
-                Sua senha
-              </span>
-              <div className="relative">
-                <input
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  autoComplete="current-password"
-                  type={show ? "text" : "password"}
-                  className="w-full rounded-xl border border-input bg-background px-4 py-3 pr-10 text-sm focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15"
-                  placeholder="Digite sua senha aqui"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShow((v) => !v)}
-                  className="absolute right-1 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-                  aria-label={show ? "Ocultar senha" : "Mostrar senha"}
-                  aria-pressed={show}
-                >
-                  {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-            </label>
-            <motion.button
-              type="submit"
-              whileTap={{ scale: 0.99 }}
-              disabled={loading}
-              className="mt-2 flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-[var(--primary-hover)] disabled:opacity-60"
-            >
-              {loading ? "Entrando..." : "Login"} <ArrowRight className="h-4 w-4" />
-            </motion.button>
-
-            <p className="text-center text-xs text-muted-foreground">
-              Não tem conta?{" "}
-              <Link to="/registro" className="font-bold text-primary hover:underline">
-                Criar conta
-              </Link>
-            </p>
-          </form>
-        </div>
-      </motion.section>
-
-      <AuthBrandPanel
-        eyebrow="Aprendizagem sustentável"
-        title="Cultive conhecimento, transforme sua escola."
-        description="Uma experiência de aprendizagem conectada à prática, à comunidade e ao impacto real da horta escolar."
+    <AuthLayout
+      panelSide="right"
+      eyebrow="Aprendizagem sustentável"
+      title="Cultive conhecimento, transforme sua escola."
+      description="Uma experiência de aprendizagem conectada à prática, à comunidade e ao impacto real da horta escolar."
+    >
+      <AuthLogo />
+      <AuthHeading
+        title="Login na Viridis"
+        description="Entre na sua conta para aproveitar todas as funcionalidades."
       />
-    </div>
+
+      <form onSubmit={handleSubmit} noValidate className="mt-8">
+        <fieldset disabled={loading} className="m-0 min-w-0 space-y-4 border-0 p-0">
+          <AuthField
+            id="login-login"
+            label="Usuário ou e-mail"
+            value={login}
+            onChange={(e) => setLogin(e.target.value)}
+            onBlur={() => touch("login")}
+            error={visibleError("login")}
+            required
+            autoComplete="username"
+            placeholder="Seu nome de usuário ou e-mail"
+          />
+          <AuthField
+            id="login-password"
+            label="Sua senha"
+            reveal
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            onBlur={() => touch("password")}
+            error={visibleError("password")}
+            required
+            autoComplete="current-password"
+            placeholder="Digite sua senha aqui"
+          />
+          <AuthSubmit loading={loading} label="Login" loadingLabel="Entrando..." />
+        </fieldset>
+        <AuthSwitch prompt="Não tem conta?" to="/registro" label="Criar conta" />
+      </form>
+    </AuthLayout>
   );
 }

@@ -11,6 +11,7 @@ import type { ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { Toaster } from "sonner";
+import { ThemeSync, THEME_STORAGE_KEY } from "@/components/theme-sync";
 
 function NotFoundComponent() {
   return (
@@ -101,8 +102,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" suppressHydrationWarning>
       <head>
+        {/* aplica o tema escuro salvo antes da primeira pintura (evita flash claro) */}
+        <script
+          dangerouslySetInnerHTML={{
+            // também marca <html class="js">: a revelação ao rolar da landing só esconde blocos com JS ativo
+            __html: `document.documentElement.classList.add("js");try{if(localStorage.getItem("${THEME_STORAGE_KEY}")==="dark")document.documentElement.classList.add("dark")}catch(e){}`,
+          }}
+        />
         <HeadContent />
       </head>
       <body>
@@ -118,6 +126,7 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <ThemeSync />
       <Outlet />
       <Toaster richColors position="top-right" />
     </QueryClientProvider>
