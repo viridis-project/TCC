@@ -14,7 +14,6 @@ import { RecentMissions, type Submission } from "@/components/garden/recent-miss
 import { ClassMissions } from "@/components/garden/class-missions";
 import { GardenRanking, type RankingKind, type RankRow } from "@/components/garden/garden-ranking";
 import { GardenAchievements, type Achievement } from "@/components/garden/garden-achievements";
-import { GardenImpact, type GardenSummary } from "@/components/garden/garden-impact";
 import { growthWindow, monthEvolution } from "@/components/garden/garden-data";
 import {
   apiFetch,
@@ -74,7 +73,6 @@ function GardenPage() {
 }
 
 type GardenResponse = {
-  resumo: GardenSummary;
   crescimento: { mes: string; valor: number }[];
   conquistas: {
     id: number;
@@ -282,7 +280,6 @@ function StudentGardenPage() {
           </div>
 
           <GardenAchievements items={achievements} />
-          <GardenImpact summary={data.garden.resumo} />
         </div>
       </MotionConfig>
 
