@@ -145,6 +145,7 @@ function SchedulePage() {
         onSubmitted={() => {
           void queryClient.invalidateQueries({ queryKey: ["agenda"] });
           void queryClient.invalidateQueries({ queryKey: ["jardim"] });
+          void queryClient.invalidateQueries({ queryKey: ["missoes"] });
           void queryClient.invalidateQueries({ queryKey: ["historico"] });
         }}
       />

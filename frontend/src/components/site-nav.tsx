@@ -1,46 +1,20 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import {
-  Home,
-  BookOpen,
-  Sprout,
-  Award,
-  User,
-  Settings,
-  Menu,
-  X,
-  Bell,
-  School,
-  History,
-  CalendarClock,
-  Trophy,
-  Users,
-} from "lucide-react";
+import { Menu, X, Bell } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch, isBrowser } from "@/lib/api";
 import { useAuth } from "@/hooks/use-auth";
+import { navItemsFor } from "@/lib/nav";
 import { NotificationsModal } from "@/components/modals/notifications-modal";
 
-const NAV = [
-  { to: "/", label: "INÍCIO", icon: Home },
-  { to: "/aprender", label: "APRENDER", icon: BookOpen },
-  { to: "/jardim", label: "JARDIM", icon: Sprout },
-  { to: "/horarios", label: "HORÁRIOS", icon: CalendarClock },
-  { to: "/ranking", label: "RANKING", icon: Trophy },
-  { to: "/recompensas", label: "RECOMPENSAS", icon: Award },
-  { to: "/historico", label: "HISTÓRICO", icon: History },
-  { to: "/perfil", label: "PERFIL", icon: User },
-  { to: "/admin", label: "ADMINISTRAÇÃO", icon: Settings },
-  { to: "/professor", label: "PAINEL DOCENTE", icon: Users },
-  { to: "/diretor", label: "DIREÇÃO", icon: School },
-] as const;
-
-export function SiteNav() {
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const [open, setOpen] = useState(false);
+/**
+ * Notificações + avatar do usuário logado (nada é renderizado para visitantes).
+ * Compartilhado entre o SiteNav e o cabeçalho da landing.
+ */
+export function NavUserActions() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const { user, role } = useAuth();
+  const { user } = useAuth();
   const { data: unread = 0 } = useQuery({
     queryKey: ["notificacoes-contagem"],
     enabled: isBrowser && !!user,
@@ -48,19 +22,43 @@ export function SiteNav() {
     queryFn: async () =>
       (await apiFetch<{ contagem: number }>("/notificacoes/contagem-nao-lidas")).contagem,
   });
-  const visibleNav = NAV.filter((item) => {
-    if (
-      role === "admin" &&
-      (item.to === "/aprender" || item.to === "/jardim" || item.to === "/horarios")
-    )
-      return false;
-    if (item.to === "/admin") return role === "admin";
-    if (item.to === "/professor") return role === "professor";
-    if (item.to === "/diretor") return role === "diretor";
-    if (item.to === "/historico" || item.to === "/recompensas")
-      return role === "aluno" || role === "admin";
-    return true;
-  });
+  if (!user) return null;
+
+  return (
+    <>
+      <button
+        onClick={() => setNotificationsOpen(true)}
+        className="relative grid h-9 w-9 place-items-center rounded-full border border-border/60 bg-card text-foreground"
+        aria-label="Notificações"
+      >
+        <Bell className="h-4 w-4" />
+        {unread > 0 && (
+          <span className="absolute -right-1 -top-1 grid min-h-5 min-w-5 place-items-center rounded-full bg-destructive px-1 text-[10px] font-extrabold text-destructive-foreground">
+            {unread > 99 ? "99+" : unread}
+          </span>
+        )}
+      </button>
+      <Link
+        to="/perfil"
+        className="grid h-9 w-9 place-items-center overflow-hidden rounded-full bg-gradient-hero text-sm font-bold text-primary-foreground shadow-soft"
+      >
+        {user.avatar ? (
+          <img src={user.avatar} alt={user.nome} className="h-full w-full object-cover" />
+        ) : (
+          user.nome.charAt(0)
+        )}
+      </Link>
+      <NotificationsModal open={notificationsOpen} onOpenChange={setNotificationsOpen} />
+    </>
+  );
+}
+
+export function SiteNav() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const [open, setOpen] = useState(false);
+  const { user, role } = useAuth();
+  // Regra de visibilidade centralizada em @/lib/nav (visitante: só "Início").
+  const visibleNav = navItemsFor(role);
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border/60 bg-background/85 backdrop-blur-xl">
@@ -118,17 +116,18 @@ export function SiteNav() {
               <Link
                 key={to}
                 to={to}
+                aria-current={active ? "page" : undefined}
                 className="relative inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-semibold tracking-wider text-muted-foreground transition-colors hover:text-foreground"
               >
                 {active && (
                   <motion.span
                     layoutId="navbubble"
-                    className="absolute inset-0 -z-10 rounded-full bg-gradient-hero shadow-soft"
+                    className="absolute inset-0 -z-10 rounded-full bg-primary/25 shadow-soft"
                     transition={{ type: "spring", stiffness: 400, damping: 32 }}
                   />
                 )}
-                <Icon className={`h-3.5 w-3.5 ${active ? "text-primary-foreground" : ""}`} />
-                <span className={active ? "text-primary-foreground" : ""}>{label}</span>
+                <Icon className={`h-3.5 w-3.5 ${active ? "text-primary" : ""}`} />
+                <span className={active ? "text-primary" : ""}>{label}</span>
               </Link>
             );
           })}
@@ -136,32 +135,22 @@ export function SiteNav() {
 
         <div className="flex items-center gap-2">
           <div className="hidden items-center gap-1.5 rounded-full border border-border/60 bg-card/60 px-2.5 py-1 sm:flex">
-            <span className="text-base leading-none">🇧🇷</span>
-          </div>
-          {user && (
-            <button
-              onClick={() => setNotificationsOpen(true)}
-              className="relative grid h-9 w-9 place-items-center rounded-full border border-border/60 bg-card text-foreground"
-              aria-label="Notificações"
+            <span
+              className="text-[10px] font-bold tracking-wider text-foreground"
+              title="Português (Brasil)"
             >
-              <Bell className="h-4 w-4" />
-              {unread > 0 && (
-                <span className="absolute -right-1 -top-1 grid min-h-5 min-w-5 place-items-center rounded-full bg-destructive px-1 text-[10px] font-extrabold text-destructive-foreground">
-                  {unread > 99 ? "99+" : unread}
-                </span>
-              )}
-            </button>
+              BR
+            </span>
+          </div>
+          <NavUserActions />
+          {!user && (
+            <Link
+              to="/login"
+              className="inline-flex h-9 items-center rounded-full bg-primary px-4 text-xs font-bold tracking-wider text-primary-foreground shadow-soft transition-colors hover:bg-[var(--primary-hover)]"
+            >
+              ENTRAR
+            </Link>
           )}
-          <Link
-            to={user ? "/perfil" : "/login"}
-            className="grid h-9 w-9 place-items-center overflow-hidden rounded-full bg-gradient-hero text-sm font-bold text-primary-foreground shadow-soft"
-          >
-            {user?.avatar ? (
-              <img src={user.avatar} alt={user.nome} className="h-full w-full object-cover" />
-            ) : (
-              (user?.nome.charAt(0) ?? "?")
-            )}
-          </Link>
           <button
             onClick={() => setOpen((v) => !v)}
             className="grid h-9 w-9 place-items-center rounded-full border border-border/60 bg-card text-foreground lg:hidden"
@@ -202,7 +191,6 @@ export function SiteNav() {
           </motion.nav>
         )}
       </AnimatePresence>
-      <NotificationsModal open={notificationsOpen} onOpenChange={setNotificationsOpen} />
     </header>
   );
 }

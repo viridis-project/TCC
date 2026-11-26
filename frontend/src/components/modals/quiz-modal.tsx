@@ -1,9 +1,10 @@
-import { AnimatePresence, motion } from "motion/react";
+import { motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { X, Sparkles, Trophy, ArrowRight, Heart } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import type { LearningLesson } from "@/routes/aprender";
 import { toast } from "sonner";
+import { VrDialog, VrDialogDescription, VrDialogTitle } from "@/components/aprender/vr-dialog";
 
 type Question = {
   id: number;
@@ -84,96 +85,104 @@ export function QuizModal({ lesson, onClose, onFinish }: QuizModalProps) {
   }
 
   return (
-    <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 grid place-items-center bg-foreground/50 p-4 backdrop-blur-md"
-      >
-        <motion.div
-          initial={{ scale: 0.94, y: 16, opacity: 0 }}
-          animate={{ scale: 1, y: 0, opacity: 1 }}
-          className="w-full max-w-lg overflow-hidden rounded-xl border border-border bg-card shadow-soft"
+    <VrDialog open onClose={onClose} className="max-w-lg overflow-hidden p-0" hideClose>
+      <VrDialogTitle className="sr-only">Quiz: {lesson.title}</VrDialogTitle>
+      <VrDialogDescription className="sr-only">
+        Responda às perguntas para concluir a lição.
+      </VrDialogDescription>
+      <div className="flex items-center gap-3 border-b border-border bg-muted/40 px-5 py-3">
+        <button
+          type="button"
+          onClick={onClose}
+          data-testid="quiz-modal-close-button"
+          className="grid h-11 w-11 place-items-center rounded-full text-muted-foreground hover:bg-accent"
+          aria-label="Fechar"
         >
-          <div className="flex items-center gap-3 border-b border-border bg-muted/40 px-5 py-3">
-            <button
-              onClick={onClose}
-              className="grid h-11 w-11 place-items-center rounded-full text-muted-foreground hover:bg-accent"
-              aria-label="Fechar"
-            >
-              <X className="h-4 w-4" />
-            </button>
-            <div className="relative h-3 flex-1 overflow-hidden rounded-full bg-muted">
-              <motion.div
-                animate={{ width: `${progress}%` }}
-                className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-success to-primary"
-              />
-            </div>
-            <div className="flex items-center gap-1 text-sm font-bold text-destructive">
-              <Heart className="h-4 w-4 fill-destructive" /> 3
-            </div>
-          </div>
+          <X className="h-4 w-4" aria-hidden="true" />
+        </button>
+        <div
+          role="progressbar"
+          aria-label="Progresso do quiz"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={Math.round(progress)}
+          className="relative h-3 flex-1 overflow-hidden rounded-full bg-muted"
+        >
+          <motion.div
+            animate={{ width: `${progress}%` }}
+            className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-success to-primary"
+          />
+        </div>
+        <div
+          aria-hidden="true"
+          className="flex items-center gap-1 text-sm font-bold text-destructive"
+        >
+          <Heart className="h-4 w-4 fill-destructive" /> 3
+        </div>
+      </div>
 
-          {loading ? (
-            <div className="p-12 text-center text-muted-foreground">Carregando quiz...</div>
-          ) : question ? (
-            <div className="p-6 sm:p-7">
-              <div className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
-                Pergunta {index + 1} de {questions.length}
-              </div>
-              <h3 className="mt-2 text-xl font-bold leading-snug sm:text-2xl">
-                {question.texto_pergunta}
-              </h3>
-              <div className="mt-5 space-y-2.5">
-                {question.opcoes.map((option, optionIndex) => {
-                  const active = selected === option.id;
-                  return (
-                    <button
-                      key={option.id}
-                      onClick={() =>
-                        setAnswers((current) => ({ ...current, [question.id]: option.id }))
-                      }
-                      className={`flex w-full items-center gap-3 rounded-lg border-2 px-4 py-3.5 text-left text-sm font-semibold transition-all ${active ? "border-primary bg-primary/10 shadow-soft" : "border-border hover:border-primary/40 hover:bg-muted/50"}`}
-                    >
-                      <span
-                        className={`grid h-7 w-7 shrink-0 place-items-center rounded-lg border text-[11px] font-bold ${active ? "border-primary bg-primary text-primary-foreground" : "border-border bg-muted text-muted-foreground"}`}
-                      >
-                        {String.fromCharCode(65 + optionIndex)}
-                      </span>
-                      {option.texto_opcao}
-                    </button>
-                  );
-                })}
-              </div>
-              <button
-                onClick={next}
-                disabled={selected === undefined || submitting}
-                className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3.5 text-sm font-bold uppercase tracking-wider text-primary-foreground disabled:opacity-40"
-              >
-                {submitting ? (
-                  "Enviando..."
-                ) : index + 1 === questions.length ? (
-                  <>
-                    <Trophy className="h-4 w-4" /> Concluir
-                  </>
-                ) : (
-                  <>
-                    Próxima <ArrowRight className="h-4 w-4" />
-                  </>
-                )}
-              </button>
-              <div className="mt-3 flex items-center justify-center gap-1 text-xs text-warning">
-                <Sparkles className="h-3.5 w-3.5" /> Até +{lesson.xp} XP
-              </div>
-            </div>
-          ) : (
-            <div className="p-12 text-center text-muted-foreground">
-              Esta lição ainda não possui perguntas.
-            </div>
-          )}
-        </motion.div>
-      </motion.div>
-    </AnimatePresence>
+      {loading ? (
+        <div className="p-12 text-center text-muted-foreground">Carregando quiz...</div>
+      ) : question ? (
+        <div className="p-6 sm:p-7">
+          <div className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+            Pergunta {index + 1} de {questions.length}
+          </div>
+          <h3 className="mt-2 text-xl font-bold leading-snug sm:text-2xl">
+            {question.texto_pergunta}
+          </h3>
+          <div className="mt-5 space-y-2.5">
+            {question.opcoes.map((option, optionIndex) => {
+              const active = selected === option.id;
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  aria-pressed={active}
+                  data-testid={`quiz-modal-option-${option.id}`}
+                  onClick={() =>
+                    setAnswers((current) => ({ ...current, [question.id]: option.id }))
+                  }
+                  className={`flex w-full items-center gap-3 rounded-lg border-2 px-4 py-3.5 text-left text-sm font-semibold transition-all ${active ? "border-primary bg-primary/10 shadow-soft" : "border-border hover:border-primary/40 hover:bg-muted/50"}`}
+                >
+                  <span
+                    className={`grid h-7 w-7 shrink-0 place-items-center rounded-lg border text-[11px] font-bold ${active ? "border-primary bg-primary text-primary-foreground" : "border-border bg-muted text-muted-foreground"}`}
+                  >
+                    {String.fromCharCode(65 + optionIndex)}
+                  </span>
+                  {option.texto_opcao}
+                </button>
+              );
+            })}
+          </div>
+          <button
+            type="button"
+            data-testid="quiz-modal-next-button"
+            onClick={next}
+            disabled={selected === undefined || submitting}
+            className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3.5 text-sm font-bold uppercase tracking-wider text-primary-foreground disabled:opacity-40"
+          >
+            {submitting ? (
+              "Enviando..."
+            ) : index + 1 === questions.length ? (
+              <>
+                <Trophy className="h-4 w-4" /> Concluir
+              </>
+            ) : (
+              <>
+                Próxima <ArrowRight className="h-4 w-4" />
+              </>
+            )}
+          </button>
+          <div className="mt-3 flex items-center justify-center gap-1 text-xs text-warning">
+            <Sparkles className="h-3.5 w-3.5" /> Até +{lesson.xp} XP
+          </div>
+        </div>
+      ) : (
+        <div className="p-12 text-center text-muted-foreground">
+          Esta lição ainda não possui perguntas.
+        </div>
+      )}
+    </VrDialog>
   );
 }
