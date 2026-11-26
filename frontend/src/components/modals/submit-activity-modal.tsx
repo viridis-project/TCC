@@ -89,7 +89,7 @@ export function SubmitActivityModal({
       : undefined) ?? missions.find((mission) => mission.tipo === submissionType);
   const selected = {
     ...selectedBase,
-    points: publishedPoints ?? selectedMission?.pontos_recompensa ?? selectedBase.points,
+    points: publishedPoints ?? selectedMission?.pontos ?? selectedBase.points,
   };
 
   async function handleSubmit(e: React.FormEvent) {
